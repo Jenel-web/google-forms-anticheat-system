@@ -2,6 +2,7 @@
 // The source folder itself still runs unpacked with the mock backend (that is what the e2e test loads).
 import { build } from 'esbuild';
 import { cp, rm, mkdir } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,7 +31,14 @@ const pickBackend = {
   },
 };
 
-// Hosted project: SUPABASE_URL and SUPABASE_ANON_KEY (both public). Unset = the local `supabase start` defaults.
+// Hosted project: SUPABASE_URL and SUPABASE_ANON_KEY (both public), from the environment or from extension/.env.production.
+// Unset = the local `supabase start` defaults.
+if (existsSync(join(root, '.env.production'))) {
+  for (const line of readFileSync(join(root, '.env.production'), 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*(SUPABASE_URL|SUPABASE_ANON_KEY)\s*=\s*(.*?)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+}
 const define = {};
 if (process.env.SUPABASE_URL) {
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(process.env.SUPABASE_URL)) {

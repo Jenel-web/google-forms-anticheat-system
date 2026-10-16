@@ -29,28 +29,30 @@ Three pieces: a hosted **Supabase** project (database + accounts), the **teacher
 
 ## 2. Teacher dashboard
 
-```bash
-cd dashboard
-echo VITE_SUPABASE_URL=https://<ref>.supabase.co > .env.production
-echo VITE_SUPABASE_ANON_KEY=<anon key> >> .env.production
-npm install
-npm run build            # output: dashboard/dist
-```
-
-Upload `dashboard/dist`:
-- **Netlify:** app.netlify.com/drop, drag the `dist` folder in. You get an `https://...netlify.app` address (rename it under Site settings if you like).
-- **Cloudflare Pages:** create a project with "Upload assets" and upload the `dist` folder.
+1. Copy `dashboard/.env.example` to `dashboard/.env.production` (the leading dot matters) and fill in the two values from Supabase step 1.
+2. Build:
+   ```bash
+   npm --prefix dashboard install
+   npm --prefix dashboard run build        # output: dashboard/dist
+   ```
+3. Upload `dashboard/dist`:
+   - **Netlify:** app.netlify.com/drop, drag the `dist` folder in. You get an `https://...netlify.app` address (rename it under Site settings if you like).
+   - **Cloudflare Pages:** create a project with "Upload assets" and upload the `dist` folder.
 
 `dist/_redirects` (copied from `dashboard/public/`) makes page refreshes and email links work. Then go back to Supabase step 3 and set the Site URL to this address.
 
 ## 3. The extension for students
 
-```bash
-SUPABASE_URL=https://<ref>.supabase.co SUPABASE_ANON_KEY=<anon key> npm --prefix extension run build
-```
-(PowerShell: `$env:SUPABASE_URL='https://<ref>.supabase.co'; $env:SUPABASE_ANON_KEY='<anon key>'; npm --prefix extension run build`)
+1. Copy `extension/.env.example` to `extension/.env.production` and fill in the same two values (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
+2. Build:
+   ```bash
+   npm --prefix extension install
+   npm --prefix extension run build
+   ```
+   The last line must say `for https://<ref>.supabase.co`. If it says `(local stack)` the env file was not found or has the wrong name. The build refuses a secret key and a malformed URL.
+3. Zip the **contents of `extension/dist`** (the folder where `manifest.json` sits directly) and share the zip. Rebuild and re-share whenever you change the URL, key or code.
 
-The build refuses a secret key and a malformed URL. Zip the **contents of `extension/dist`** (the folder where `manifest.json` sits directly) and share the zip. Rebuild and re-share whenever you change the URL, key or code.
+`.env.production` files are git-ignored; only the `.env.example` templates are committed.
 
 ## 4. Student install (about 1 minute)
 

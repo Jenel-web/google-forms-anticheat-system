@@ -38,8 +38,14 @@ Three pieces: a hosted **Supabase** project (database + accounts), the **teacher
 3. Upload `dashboard/dist`:
    - **Netlify:** app.netlify.com/drop, drag the `dist` folder in. You get an `https://...netlify.app` address (rename it under Site settings if you like).
    - **Cloudflare Pages:** create a project with "Upload assets" and upload the `dist` folder.
+- **Vercel:** deploy the already-built folder, so Vercel never has to build the project (the dashboard imports shared code from sibling folders, which a Vercel build with root `dashboard/` would not see):
+  ```bash
+  cd dashboard/dist
+  npx vercel --prod
+  ```
+  Log in when asked, accept the defaults (no framework, no build command), and you get an `https://….vercel.app` address. `dist/vercel.json` (copied from `dashboard/public/`) makes refreshes and email links work. To update later, rebuild and run the same command again.
 
-`dist/_redirects` (copied from `dashboard/public/`) makes page refreshes and email links work. Then go back to Supabase step 3 and set the Site URL to this address.
+`dist/_redirects` (Netlify, Cloudflare) and `dist/vercel.json` (Vercel) are copied from `dashboard/public/` and make page refreshes and email links work. Then go back to Supabase step 3 and set the Site URL to this address.
 
 ## 3. The extension for students
 

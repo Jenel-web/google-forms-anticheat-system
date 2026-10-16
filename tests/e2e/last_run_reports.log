@@ -1,0 +1,43 @@
+PASS  teacher signs up, confirms and signs in
+PASS  seeded 3 attempts and their events
+PASS  the monitor has a Report button
+PASS  the report opens
+PASS  hand-calculated score (100 - 20 - 15) is 65
+PASS  the report shows 65 for the hand-checked student
+PASS  students are listed lowest score first
+PASS  class summary counts 3 students
+PASS  average integrity is (65 + 90 + 100) / 3 = 85
+PASS  one student is flagged for review (score under 85)
+PASS  heatmap Q3: 1 episode, 10 s
+PASS  heatmap Q5: 1 episode, 20 s
+PASS  heatmap has no other episodes
+PASS  the timeline opens
+PASS  the ring shows 65
+PASS  the score breakdown lists -20 for strikes and -15 for time away
+PASS  the timeline reads Started, two leave episodes, Submitted
+PASS  an episode names its question
+PASS  an episode names the domain
+PASS  a gap shows as 'Connection gap (unverified)'
+PASS  the gap summary counts both gaps
+PASS  gaps are not in the score
+PASS  the 500-event timeline loads
+PASS  showing every event lists all 500
+PASS  500 events render in under 1.5 s
+PASS  scrolling the long timeline stays smooth (>= 20 frames in 1 s)
+PASS  events CSV starts with a UTF-8 BOM (Excel)
+PASS  events CSV uses CRLF line ends
+PASS  events CSV rows match the events table
+PASS  attempts CSV has one row per attempt
+PASS  attempts CSV carries the same score (65)
+PASS  the reconciliation lists appear
+PASS  matched list has the 2 students who submitted
+PASS  'submitted with no monitored attempt' lists the stranger
+PASS  'monitored but no submission' lists the busy student
+PASS  the upload made no network request at all
+PASS  no answer text is on the page
+PASS  a file with no email column is rejected with a clear message
+PASS  the anon key cannot read events
+PASS  the anon key cannot read attempts
+PASS  no answer text reached the database
+
+All checks passed.

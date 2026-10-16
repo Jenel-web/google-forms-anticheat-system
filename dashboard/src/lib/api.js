@@ -47,3 +47,25 @@ export const recentEvents = async (attemptIds, types, limit = 40) =>
 
 export const unlock = async (attemptId) =>
   unwrap(await supabase.from('commands').insert({ attempt_id: attemptId, type: 'unlock' }));
+
+const PAGE = 1000; // PostgREST returns at most 1000 rows per request
+
+async function allPages(build) {
+  const rows = [];
+  for (let from = 0; ; from += PAGE) {
+    const page = unwrap(await build().range(from, from + PAGE - 1));
+    rows.push(...page);
+    if (page.length < PAGE) return rows;
+  }
+}
+
+const EVENT_FIELDS = 'id, attempt_id, seq, t, type, q, data, received_at';
+
+// Every event of one attempt, oldest first.
+export const listAttemptEvents = (attemptId) =>
+  allPages(() => supabase.from('events').select(EVENT_FIELDS).eq('attempt_id', attemptId).order('id'));
+
+// Every event of every attempt of a test, in one filtered query (no long id lists in the URL).
+export const listTestEvents = (testId) =>
+  allPages(() => supabase.from('events').select(`${EVENT_FIELDS}, attempts!inner(test_id)`)
+    .eq('attempts.test_id', testId).order('id'));

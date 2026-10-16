@@ -215,6 +215,7 @@ export default function Monitor({ initialTest }) {
           </p>
         </div>
         <div className="cn-actions">
+          <Link to={`/tests/${test.id}/report`} className="cn-btn cn-btn--secondary" data-testid="open-report"><Icon name="chart" />Report</Link>
           {live ? (
             <button className="cn-btn cn-btn--danger" type="button" onClick={() => { setDialogError(''); setDialog('end'); }}>End test…</button>
           ) : null}
@@ -265,7 +266,7 @@ export default function Monitor({ initialTest }) {
                     <div className="cn-grow__main">
                       <Avatar text={initials(a.student_name)} />
                       <span>
-                        {a.student_name}
+                        <Link to={`/tests/${test.id}/attempts/${a.id}`} className="dash-link">{a.student_name}</Link>
                         <small className="dash-sub">{a.student_email} · {a.verified
                           ? <span className="dash-verified">✓ verified</span> : <span className="dash-unverified">unverified</span>}</small>
                       </span>

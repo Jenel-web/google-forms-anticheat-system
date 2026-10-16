@@ -63,4 +63,3 @@ PASS  record mode: new tab is not closed
 PASS  record mode: still no overlay
 
 All checks passed.
-exit=0

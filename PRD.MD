@@ -239,8 +239,10 @@ Start at 100 and subtract the following (the score can't go below 0):
 | Blocked-site attempt            | −15                                 |
 | Suspicious return (FR-33)       | −5                                  |
 | Copy, paste or devtools attempt | −2 (capped at −10 in total)         |
-| Heartbeat gap > 30s             | −10 per gap                         |
+| Connection gap > 30s            | 0 (shown as "connection gap (unverified)", D12) |
 | Unverified email                | 0 (shown as a badge, not a penalty) |
+
+**Connection gaps (D12) are never subtracted.** An earlier draft of this table took −10 per heartbeat gap; D12 overrides it: offline time is shown, not penalized. A gap is recorded two ways, merged so it is never counted twice: the extension writes a `connection_gap` event (`seconds`, `from`) when its heartbeat is accepted again after more than 30 s of silence, and the dashboard also infers one from any event whose server arrival time (`received_at`) is more than 30 s after its own timestamp. A student is flagged when gaps add up to more than 2 minutes or there are more than 3. A suspicious return is a `returned` event followed by a `question_changed` to a different question within 10 s.
 
 The score is computed in the dashboard from the events (a pure function in `extension/src/shared/` that is reused by the dashboard). It's a **signal for the teacher's judgement, not an automatic verdict**, and the UI must say so.
 
@@ -370,7 +372,7 @@ Add `attempts` and `events` to the `supabase_realtime` publication. The dashboar
 
 ### Event types
 
-`session_start`, `consent_accepted`, `strike`, `returned`, `tab_switch`, `tab_opened`, `tab_navigated`, `other_window`, `left_browser`, `navigated_away`, `exam_tab_closed`, `tab_reopened`, `page_reload`, `visibility_hidden`, `visibility_visible`, `blocked_site_attempt`, `copy_attempt`, `cut_attempt`, `paste_attempt`, `contextmenu_attempt`, `shortcut_blocked`, `printscreen`, `fullscreen_exit`, `fullscreen_enter`, `idle_idle`, `idle_locked`, `idle_end`, `question_changed`, `ack`, `locked`, `unlocked`, `submitted`, `closed`, `submitted_after_close`, `allowed_tab_opened`, `allowed_site_viewed`, `input_while_blocked`, `submit_while_blocked`.
+`session_start`, `consent_accepted`, `strike`, `returned`, `tab_switch`, `tab_opened`, `tab_navigated`, `other_window`, `left_browser`, `navigated_away`, `exam_tab_closed`, `tab_reopened`, `page_reload`, `visibility_hidden`, `visibility_visible`, `blocked_site_attempt`, `copy_attempt`, `cut_attempt`, `paste_attempt`, `contextmenu_attempt`, `shortcut_blocked`, `printscreen`, `fullscreen_exit`, `fullscreen_enter`, `idle_idle`, `idle_locked`, `idle_end`, `question_changed`, `ack`, `locked`, `unlocked`, `submitted`, `closed`, `submitted_after_close`, `connection_gap`, `allowed_tab_opened`, `allowed_site_viewed`, `input_while_blocked`, `submit_while_blocked`.
 
 The client-side event `{attemptId, t, type, q, ...detail}` maps to the row `{attempt_id, t, type, q, data: detail}`.
 
@@ -412,7 +414,7 @@ The client-side event `{attemptId, t, type, q, ...detail}` maps to the row `{att
 | M1  | Extension skeleton | FR-1 to FR-25 and FR-27, against a mock backend, plus the dev popup and e2e test                                                                                                                                                                                                                                | ✅ Done |
 | M2  | Supabase backend   | `supabase/` migration (§8), RLS and RPCs, database tests; esbuild bundling; `backend.supabase.js` with anonymous auth and a `chrome.storage` session adapter; event batching; heartbeat-delivered commands; FR-26 resume                                                                                        | ✅ Done |
 | M3  | Dashboard: core    | Email/password auth, tests list, add/edit test, live monitor, unlock (FR-28 to FR-31), go-live checkboxes (D7), End flow (D13), data-retention setting (D14)                                                                                                                                                    | ✅ Done (retention setting: text only) |
-| M4  | Dashboard: insight | Timeline, integrity score, report, heatmap, CSV (FR-32, FR-33, §6.8), responses reconciliation by CSV upload (D8), connection gap markers (D12)                                                                                                                                                                 |         |
+| M4  | Dashboard: insight | Timeline, integrity score, report, heatmap, CSV (FR-32, FR-33, §6.8), responses reconciliation by CSV upload (D8), connection gap markers (D12)                                                                                                                                                                 | ✅ Done (CSV only; no PDF export) |
 | M5  | Polish and ship    | Onboarding page (FR-34), the user's final designs, icons, Chrome Web Store listing, privacy policy, "Allow in incognito" install step (D9), alternate unprotected form guidance (D11), accessibility review of overlays (NFR-6), retention notice in consent and auto-deletion (D14), admin force-install guide |         |
 
 ---

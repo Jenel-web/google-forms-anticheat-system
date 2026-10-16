@@ -348,6 +348,10 @@ def flow_outage(ctx, helper, teacher):
     check("outage: queued events arrive after reconnect",
           wait_until(lambda: "strike" in [e["type"] for e in teacher.events(x["id"])], timeout=60, step=1))
     print(f"      (events arrived {time.time() - back:.0f}s after the API came back)")
+    wait_until(lambda: teacher.get(f"/rest/v1/events?select=data&attempt_id=eq.{x['id']}&type=eq.connection_gap"), timeout=30, step=1)
+    gaps = teacher.get(f"/rest/v1/events?select=data&attempt_id=eq.{x['id']}&type=eq.connection_gap")
+    check("D12/Phase 5: the outage is recorded as one connection_gap event of about a minute",
+          len(gaps) == 1 and 30 <= gaps[0]["data"]["seconds"] <= 150, str(gaps))
     evs = teacher.events(x["id"])
     check("outage: events carry contiguous sequence numbers", contiguous(evs) and len(evs) > seqs_before, str([e["seq"] for e in evs]))
     check("outage: strike count reaches the database", wait_until(lambda: teacher.latest()["strikes"] == 1, timeout=15), str(teacher.latest()))

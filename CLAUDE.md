@@ -32,6 +32,13 @@ Before writing any code, creating components, or building frontend screens, you 
   column-level grants: teachers edit DRAFT tests only, and status changes only through the RPCs. Covered by
   `tests/e2e/run_e2e_dashboard.py` (two teachers + one live student). Not built yet: the data-retention setting (D14,
   shown as text only), timeline/report/heatmap/CSV/reconciliation (M4), onboarding page (FR-34).
+- **M4 done (Phase 5):** `dashboard/` adds the class report (`/tests/:id/report`: ranked integrity scores, question heatmap, CSV of
+  attempts and events, reconciliation upload per D8) and the student timeline (`/tests/:id/attempts/:attemptId`: ring, score
+  breakdown, event list, connection-gap markers per D12). Scoring is the pure `extension/src/shared/integrity.js` (§6.8); CSV and
+  reconciliation are `dashboard/src/lib/{csv,reconcile,report}.js`. The extension now writes a `connection_gap` event when a
+  heartbeat is accepted after more than 30 s of silence (`backend.supabase.js`); gaps are shown, never scored. Covered by
+  `tests/e2e/run_e2e_reports.py` (headless, seeds data by SQL) plus unit tests. Not built: PDF export, answer-correlation (needs
+  answer data, which D6/NFR-1 rule out), data-retention setting (D14), onboarding page (FR-34).
 - **Local auth config:** `supabase/config.toml` has `enable_confirmations = true`; confirmation emails are read from Mailpit
   (http://127.0.0.1:54324). After changing config.toml run `supabase stop && supabase start`.
 - The Supabase build is `extension/dist/` (load that unpacked). `extension/` itself still runs with the mock backend.
@@ -63,6 +70,7 @@ PRD.MD                              product requirements (source of truth for sc
 README.md                           install, manual test checklist, known limits
 extension/                          Chrome extension (load this folder unpacked)
   manifest.json
+  src/shared/integrity.js           integrity score (PRD §6.8), leave episodes, gaps, question heatmap (pure; dashboard reuses it)
   src/shared/constants.js           DEFAULT_SETTINGS, DEFAULT_BLOCKLIST, parseFormId, hostOf, domainMatches, phaseForStrikes
   src/background/background.js      service worker: sessions, leave episodes, snap-back, DNR blocklist, messages
   src/background/backend.js         re-exports the active backend — the ONLY import site for data access
@@ -79,6 +87,8 @@ supabase/                           (M2) config.toml, migrations/, tests/ (supab
 dashboard/                          Vite + React teacher dashboard (supabase-js): src/pages, src/lib/api.js, src/lib/format.js
 tests/e2e/run_e2e.py                Playwright e2e for the extension (mock backend)
 tests/e2e/run_e2e_supabase.py       Playwright e2e against the local Supabase stack (M2 acceptance)
+tests/e2e/run_e2e_dashboard.py      Phase 4 gate: two teachers + one live student
+tests/e2e/run_e2e_reports.py        Phase 5 gate: score, timeline, gaps, CSV, reconciliation, 500 events (headless)
 ```
 
 ## Commands
@@ -113,7 +123,7 @@ npm --prefix extension install                 # once: esbuild + @supabase/supab
 npm --prefix extension run build               # esbuild -> extension/dist/ with the supabase backend (load dist/ unpacked)
 npm --prefix extension run build:mock          # same bundle with the mock backend
 python tests/e2e/run_e2e_supabase.py           # needs `supabase start` + `supabase db reset`; builds dist itself, ~7 min
-npm --prefix extension test                    # unit tests for the shared helpers (parseFormId, formLinkIssue)
+npm --prefix extension test                    # unit tests for the shared helpers (parseFormId, formLinkIssue, integrity score)
 ```
 
 Dashboard:
@@ -122,8 +132,9 @@ Dashboard:
 npm --prefix dashboard install                 # once
 npm --prefix dashboard run dev                 # http://127.0.0.1:3000 (port matches site_url so email links land here)
 npm --prefix dashboard run build               # production bundle in dashboard/dist (needs SPA rewrites on a static host)
-npm --prefix dashboard test                    # unit tests (heartbeat rule, filters, feed text)
+npm --prefix dashboard test                    # unit tests (heartbeat rule, filters, feed text, CSV, reconciliation, timeline)
 python tests/e2e/run_e2e_dashboard.py          # the Phase 4 gate: starts the dev server itself, headed student window, ~4 min
+python tests/e2e/run_e2e_reports.py            # the Phase 5 gate: starts the dev server itself, headless, ~1 min; needs `supabase start`
 ```
 
 The dashboard imports `parseFormId`/`formLinkIssue`/`mergeSettings` straight from `extension/src/shared/` (Vite alias

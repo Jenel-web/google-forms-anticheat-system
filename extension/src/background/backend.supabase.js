@@ -3,6 +3,7 @@
 // per-attempt sequence numbers, a pending finish) lives in chrome.storage.local, never only in module variables.
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../shared/supabaseConfig.js';
+import { GAP_MIN_MS } from '../shared/integrity.js';
 
 const STATE_KEY = 'eg_sb_state';
 const FLUSH_MS = 2000;
@@ -66,7 +67,7 @@ async function rpc(name, args) {
 
 // ------------------------------------------------------------------ persisted state: event queue, seq, pending finish
 
-let state = { queue: [], seq: {}, finish: {} };
+let state = { queue: [], seq: {}, finish: {}, lastOk: {} };
 const loading = chrome.storage.local.get(STATE_KEY).then((res) => {
   const stored = res[STATE_KEY];
   if (stored) {
@@ -74,6 +75,7 @@ const loading = chrome.storage.local.get(STATE_KEY).then((res) => {
       queue: stored.queue || [],
       seq: stored.seq || {},
       finish: stored.finish || {},
+      lastOk: stored.lastOk || {}, // attemptId -> ms of the last heartbeat the server accepted (D12 gap detection)
     };
   }
   if (state.queue.length || Object.keys(state.finish).length) scheduleFlush(0);
@@ -138,6 +140,7 @@ async function flushOnce() {
     }
     delete state.finish[attemptId];
     delete state.seq[attemptId];
+    delete state.lastOk[attemptId];
     await persist();
   }
 }
@@ -213,12 +216,30 @@ export async function patchAttempt(attemptId, patch) {
   }
 }
 
+// D12: the server accepted a heartbeat. If the one before it was more than GAP_MIN_MS ago the student was offline (or the
+// machine slept, or Chrome was closed): record a gap. It is shown to the teacher as unverified and never scored.
+async function noteHeartbeatOk(attemptId, q) {
+  await loading;
+  const now = Date.now();
+  const before = state.lastOk[attemptId];
+  state.lastOk[attemptId] = now;
+  if (before && now - before > GAP_MIN_MS) {
+    await appendEvent({
+      attemptId, t: new Date(now).toISOString(), type: 'connection_gap', q: q || null,
+      seconds: Math.round((now - before) / 1000), from: new Date(before).toISOString(),
+    });
+  } else {
+    await persist();
+  }
+}
+
 async function sendHeartbeat(attemptId) {
   const cur = latest[attemptId];
   if (!cur) return;
   const res = await rpc('heartbeat', {
     p_attempt_id: attemptId, p_status: cur.status, p_strikes: cur.strikes, p_q: cur.q || null,
   });
+  await noteHeartbeatOk(attemptId, cur.q);
   if (!res) return;
   for (const cmd of res.commands || []) {
     for (const h of handlers) await h({ type: cmd.type, attemptId });

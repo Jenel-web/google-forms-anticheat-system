@@ -5,6 +5,8 @@ import { Avatar, Icon, Logo } from './ui.jsx';
 import Auth from './pages/Auth.jsx';
 import TestsList from './pages/TestsList.jsx';
 import TestPage from './pages/TestPage.jsx';
+import Report from './pages/Report.jsx';
+import Timeline from './pages/Timeline.jsx';
 
 // Students are anonymous Supabase users. They must never be treated as a teacher (CLAUDE.md invariant).
 const isTeacher = (session) => !!session && !session.user.is_anonymous;
@@ -42,6 +44,10 @@ function Shell({ session, children }) {
 function Routes() {
   const path = usePath();
   if (path === '/tests/new') return <TestPage id={null} />;
+  const timeline = path.match(/^\/tests\/([0-9a-f-]{36})\/attempts\/([0-9a-f-]{36})\/?$/i);
+  if (timeline) return <Timeline testId={timeline[1]} attemptId={timeline[2]} key={timeline[2]} />;
+  const report = path.match(/^\/tests\/([0-9a-f-]{36})\/report\/?$/i);
+  if (report) return <Report id={report[1]} key={report[1]} />;
   const m = path.match(/^\/tests\/([0-9a-f-]{36})\/?$/i);
   if (m) return <TestPage id={m[1]} key={m[1]} />;
   if (path !== '/') navigate('/', { replace: true });

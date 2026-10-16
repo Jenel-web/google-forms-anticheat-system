@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node build.mjs",
     "build:mock": "node build.mjs mock",
-    "test": "node --test test/shared.test.mjs"
+    "test": "node --test test/shared.test.mjs test/integrity.test.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

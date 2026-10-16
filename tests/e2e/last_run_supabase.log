@@ -1,7 +1,7 @@
 
-  dist\src\background\background.js  761.8kb
+  dist\src\background\background.js  762.5kb
 
-Done in 41ms
+Done in 238ms
 Built extension/dist with the supabase backend. Load it unpacked from chrome://extensions.
 PASS  unprotected form: nothing appears
 PASS  seeded form is live: consent screen appears
@@ -36,14 +36,15 @@ PASS  outage: new attempt row
 PASS  outage: the strike still shows locally
 PASS  outage: the API comes back
 PASS  outage: queued events arrive after reconnect
-      (events arrived 5s after the API came back)
+      (events arrived 1s after the API came back)
+PASS  D12/Phase 5: the outage is recorded as one connection_gap event of about a minute
 PASS  outage: events carry contiguous sequence numbers
 PASS  outage: strike count reaches the database
 PASS  D12: the outage itself is not penalized (1 strike, not locked)
 PASS  extension disabled: the attempt stays active (not finished)
 PASS  extension disabled: last_heartbeat goes stale
 PASS  closed-in-SQL: reopening the form resumes the same attempt
-PASS  closed-in-SQL: the student sees the closed screen within about 5 s (took 4.8s)
+PASS  closed-in-SQL: the student sees the closed screen within about 5 s (took 4.9s)
 PASS  closed-in-SQL: the HUD is gone and monitoring stopped
 PASS  closed-in-SQL: the screen can be dismissed
 PASS  closed-in-SQL: the attempt stays closed
@@ -57,7 +58,6 @@ PASS  events before close reached the database
 PASS  second profile: consent screen
 PASS  second profile: exam starts
 PASS  second profile: a new attempt with a different student_uid
-      (4 attempts for this student name, 2 distinct student_uid values)
+      (11 attempts for this student name, 6 distinct student_uid values)
 
 All checks passed.
-exit=0

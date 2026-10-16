@@ -1,7 +1,10 @@
 -- ExamGuard M2: tables, RLS (teacher side) and RPCs (student side). See PRD section 8.
+-- Written to be re-runnable: tables, indexes and functions are only created or replaced, policies and the trigger are
+-- dropped and recreated, and the realtime publication is only added to when needed. If you paste the files into the
+-- SQL editor by hand, run them in filename order (this one, then teacher_lifecycle).
 
 -- ============ tables ============
-create table public.tests (
+create table if not exists public.tests (
   id          uuid primary key default gen_random_uuid(),
   owner_id    uuid not null default auth.uid() references auth.users on delete cascade,
   title       text not null check (char_length(title) between 1 and 200),
@@ -12,10 +15,10 @@ create table public.tests (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
-create unique index tests_one_live_per_form on public.tests (form_id) where status = 'live';
-create index tests_owner_idx on public.tests (owner_id);
+create unique index if not exists tests_one_live_per_form on public.tests (form_id) where status = 'live';
+create index if not exists tests_owner_idx on public.tests (owner_id);
 
-create table public.attempts (
+create table if not exists public.attempts (
   id                uuid primary key default gen_random_uuid(),
   test_id           uuid not null references public.tests on delete cascade,
   student_uid       uuid not null references auth.users on delete cascade,
@@ -32,15 +35,15 @@ create table public.attempts (
   ended_at          timestamptz,
   last_heartbeat    timestamptz not null default now()
 );
-create index attempts_test_idx on public.attempts (test_id);
-create index attempts_student_test_idx on public.attempts (student_uid, test_id);
+create index if not exists attempts_test_idx on public.attempts (test_id);
+create index if not exists attempts_student_test_idx on public.attempts (student_uid, test_id);
 -- a student has at most one unfinished attempt per test (makes start_attempt race-safe)
-create unique index attempts_one_open_per_student on public.attempts (test_id, student_uid)
+create unique index if not exists attempts_one_open_per_student on public.attempts (test_id, student_uid)
   where status not in ('submitted', 'abandoned', 'closed');
 
 -- seq and received_at are additions to the PRD sketch (NFR-3): seq makes retries idempotent and lets gaps be proven;
 -- received_at is the server's arrival time, which a changed device clock cannot fake.
-create table public.events (
+create table if not exists public.events (
   id           bigint generated always as identity primary key,
   attempt_id   uuid not null references public.attempts on delete cascade,
   seq          int,
@@ -50,10 +53,10 @@ create table public.events (
   q            jsonb check (pg_column_size(q) < 512),
   data         jsonb not null default '{}'::jsonb check (pg_column_size(data) < 2048)
 );
-create index events_attempt_t_idx on public.events (attempt_id, t);
-create unique index events_attempt_seq_idx on public.events (attempt_id, seq) where seq is not null;
+create index if not exists events_attempt_t_idx on public.events (attempt_id, t);
+create unique index if not exists events_attempt_seq_idx on public.events (attempt_id, seq) where seq is not null;
 
-create table public.commands (
+create table if not exists public.commands (
   id          bigint generated always as identity primary key,
   attempt_id  uuid not null references public.attempts on delete cascade,
   type        text not null check (type in ('unlock')),
@@ -61,14 +64,15 @@ create table public.commands (
   created_at  timestamptz not null default now(),
   consumed_at timestamptz
 );
-create index commands_pending_idx on public.commands (attempt_id) where consumed_at is null;
+create index if not exists commands_pending_idx on public.commands (attempt_id) where consumed_at is null;
 
-create function public.touch_updated_at() returns trigger language plpgsql as $$
+create or replace function public.touch_updated_at() returns trigger language plpgsql as $$
 begin
   new.updated_at := now();
   return new;
 end
 $$;
+drop trigger if exists tests_touch on public.tests;
 create trigger tests_touch before update on public.tests
   for each row execute function public.touch_updated_at();
 
@@ -86,36 +90,41 @@ alter table public.events enable row level security;
 alter table public.commands enable row level security;
 
 -- true for real (non-anonymous) signed-in users
-create function public.is_teacher() returns boolean
+create or replace function public.is_teacher() returns boolean
 language sql stable set search_path = public as $$
   select auth.uid() is not null and coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false
 $$;
 
+drop policy if exists tests_owner_all on public.tests;
 create policy tests_owner_all on public.tests for all
   using (owner_id = auth.uid() and public.is_teacher())
   with check (owner_id = auth.uid() and public.is_teacher());
 
+drop policy if exists attempts_owner_read on public.attempts;
 create policy attempts_owner_read on public.attempts for select
   using (public.is_teacher() and exists (
     select 1 from public.tests t where t.id = test_id and t.owner_id = auth.uid()));
 
+drop policy if exists events_owner_read on public.events;
 create policy events_owner_read on public.events for select
   using (public.is_teacher() and exists (
     select 1 from public.attempts a join public.tests t on t.id = a.test_id
     where a.id = attempt_id and t.owner_id = auth.uid()));
 
 -- the PRD sketch only checked is_teacher() on insert, which let any teacher unlock another teacher's student
+drop policy if exists commands_owner_read on public.commands;
 create policy commands_owner_read on public.commands for select
   using (public.is_teacher() and exists (
     select 1 from public.attempts a join public.tests t on t.id = a.test_id
     where a.id = attempt_id and t.owner_id = auth.uid()));
+drop policy if exists commands_owner_insert on public.commands;
 create policy commands_owner_insert on public.commands for insert
   with check (public.is_teacher() and exists (
     select 1 from public.attempts a join public.tests t on t.id = a.test_id
     where a.id = attempt_id and t.owner_id = auth.uid()));
 
 -- ============ RPCs (student side) ============
-create function public.get_live_test(p_form_id text)
+create or replace function public.get_live_test(p_form_id text)
 returns table (id uuid, title text, settings jsonb)
 language plpgsql security definer set search_path = public as $$
 begin
@@ -129,7 +138,7 @@ begin
 end
 $$;
 
-create function public.start_attempt(
+create or replace function public.start_attempt(
   p_form_id text, p_name text, p_email text, p_chrome_email text default null, p_ext_version text default null)
 returns public.attempts
 language plpgsql security definer set search_path = public as $$
@@ -179,7 +188,7 @@ begin
 end
 $$;
 
-create function public.log_events(p_attempt_id uuid, p_events jsonb)
+create or replace function public.log_events(p_attempt_id uuid, p_events jsonb)
 returns int
 language plpgsql security definer set search_path = public as $$
 declare
@@ -221,7 +230,7 @@ begin
 end
 $$;
 
-create function public.heartbeat(
+create or replace function public.heartbeat(
   p_attempt_id uuid, p_status text, p_strikes int, p_q jsonb default null)
 returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -284,7 +293,7 @@ begin
 end
 $$;
 
-create function public.finish_attempt(p_attempt_id uuid, p_status text)
+create or replace function public.finish_attempt(p_attempt_id uuid, p_status text)
 returns void
 language plpgsql security definer set search_path = public as $$
 declare
@@ -319,4 +328,15 @@ grant execute on function public.heartbeat(uuid, text, int, jsonb) to authentica
 grant execute on function public.finish_attempt(uuid, text) to authenticated;
 
 -- ============ realtime ============
-alter publication supabase_realtime add table public.attempts, public.events;
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['attempts', 'events'] loop
+    if not exists (select 1 from pg_publication_tables
+                   where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end
+$$;

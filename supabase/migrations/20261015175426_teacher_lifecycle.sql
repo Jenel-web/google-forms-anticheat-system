@@ -1,26 +1,32 @@
 -- M3: test lifecycle through RPCs only (Go live with the D7 attestation, End with D13), and the late-submission flag.
+-- Re-runnable: the column is added only if missing, policies are dropped and recreated, functions are created or replaced.
+-- Run it after the init migration.
 
-alter table public.tests add column attested_at timestamptz;
+alter table public.tests add column if not exists attested_at timestamptz;
 
 -- Teachers edit title, link and settings of a DRAFT test. Status changes only through go_live / end_test.
 revoke insert, update on public.tests from authenticated;
 grant insert (title, form_id, form_url, settings) on public.tests to authenticated;
 grant update (title, form_id, form_url, settings) on public.tests to authenticated;
 
-drop policy tests_owner_all on public.tests;
+drop policy if exists tests_owner_all on public.tests;
+drop policy if exists tests_owner_select on public.tests;
 create policy tests_owner_select on public.tests for select
   using (owner_id = auth.uid() and public.is_teacher());
+drop policy if exists tests_owner_insert on public.tests;
 create policy tests_owner_insert on public.tests for insert
   with check (owner_id = auth.uid() and public.is_teacher() and status = 'draft');
+drop policy if exists tests_owner_update on public.tests;
 create policy tests_owner_update on public.tests for update
   using (owner_id = auth.uid() and public.is_teacher() and status = 'draft')
   with check (owner_id = auth.uid() and public.is_teacher() and status = 'draft');
+drop policy if exists tests_owner_delete on public.tests;
 create policy tests_owner_delete on public.tests for delete
   using (owner_id = auth.uid() and public.is_teacher());
 
 -- D7: the teacher attests that "Limit to 1 response" and verified emails are on in Google Forms.
 -- We cannot check it without the Forms API (D3), so the attestation is recorded.
-create function public.go_live(p_test_id uuid, p_one_response boolean, p_verified_email boolean)
+create or replace function public.go_live(p_test_id uuid, p_one_response boolean, p_verified_email boolean)
 returns public.tests
 language plpgsql security definer set search_path = public as $$
 declare
@@ -50,7 +56,7 @@ $$;
 
 -- D13 step 2: the test becomes ended and every unfinished attempt is closed. Each student's next heartbeat
 -- returns closed = true, so the extension ends the session within about 5 seconds.
-create function public.end_test(p_test_id uuid)
+create or replace function public.end_test(p_test_id uuid)
 returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare

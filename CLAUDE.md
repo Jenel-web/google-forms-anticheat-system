@@ -68,6 +68,7 @@ CLAUDE.md
 PRD.MD                              product requirements (source of truth for scope; this file is at the repo root,
                                     not docs/PRD.md as written elsewhere in this file)
 README.md                           install, manual test checklist, known limits
+DEPLOY.md                           hosted Supabase + dashboard hosting + student install steps
 extension/                          Chrome extension (load this folder unpacked)
   manifest.json
   src/shared/integrity.js           integrity score (PRD §6.8), leave episodes, gaps, question heatmap (pure; dashboard reuses it)
@@ -123,6 +124,7 @@ npm --prefix extension install                 # once: esbuild + @supabase/supab
 npm --prefix extension run build               # esbuild -> extension/dist/ with the supabase backend (load dist/ unpacked)
 npm --prefix extension run build:mock          # same bundle with the mock backend
 python tests/e2e/run_e2e_supabase.py           # needs `supabase start` + `supabase db reset`; builds dist itself, ~7 min
+# Hosted build (see DEPLOY.md): SUPABASE_URL=https://<ref>.supabase.co SUPABASE_ANON_KEY=<anon key> npm --prefix extension run build
 npm --prefix extension test                    # unit tests for the shared helpers (parseFormId, formLinkIssue, integrity score)
 ```
 

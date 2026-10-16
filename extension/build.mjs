@@ -30,7 +30,20 @@ const pickBackend = {
   },
 };
 
+// Hosted project: SUPABASE_URL and SUPABASE_ANON_KEY (both public). Unset = the local `supabase start` defaults.
+const define = {};
+if (process.env.SUPABASE_URL) {
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(process.env.SUPABASE_URL)) {
+    throw new Error('SUPABASE_URL must look like https://<project-ref>.supabase.co');
+  }
+  if (!process.env.SUPABASE_ANON_KEY) throw new Error('Set SUPABASE_ANON_KEY together with SUPABASE_URL');
+  if (/service_role|sb_secret_/.test(process.env.SUPABASE_ANON_KEY)) throw new Error('That is a secret key. Use the anon/publishable key only.');
+  define.__SUPABASE_URL__ = JSON.stringify(process.env.SUPABASE_URL.replace(/\/$/, ''));
+  define.__SUPABASE_ANON_KEY__ = JSON.stringify(process.env.SUPABASE_ANON_KEY);
+}
+
 await build({
+  define,
   entryPoints: [join(root, 'src/background/background.js')],
   outfile: join(dist, 'src/background/background.js'),
   bundle: true,
@@ -41,4 +54,4 @@ await build({
   logLevel: 'info',
 });
 
-console.log(`Built extension/dist with the ${backend} backend. Load it unpacked from chrome://extensions.`);
+console.log(`Built extension/dist with the ${backend} backend${define.__SUPABASE_URL__ ? ` for ${JSON.parse(define.__SUPABASE_URL__)}` : ' (local stack)'}. Load it unpacked from chrome://extensions.`);

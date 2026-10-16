@@ -1,0 +1,66 @@
+PASS  unprotected form: nothing appears
+PASS  popup protects a form
+PASS  protected form: consent screen appears
+PASS  invalid email is rejected
+PASS  invalid email creates no attempt
+PASS  D10: 'I don't agree' shows the contact-your-teacher message
+PASS  D10: no attempt and no events recorded
+PASS  D10: consent screen comes back
+PASS  exam starts: HUD shows Protected, Strikes 0/3
+PASS  exactly one attempt created
+PASS  session events logged
+PASS  DNR blocklist rules installed
+PASS  start enters fullscreen (user gesture)
+PASS  new tab -> warning shown
+PASS  new tab -> strike 1
+PASS  new tab was closed
+PASS  Continue exam dismisses the warning
+PASS  allowlisted tab is not closed
+PASS  allowlisted site adds no strike
+PASS  allowlisted site is logged
+PASS  closing the allowlisted tab adds no strike
+PASS  chatgpt.com -> blocked page
+PASS  blocked page says Strike 2 of 3 added
+PASS  blocked attempt logged
+PASS  strike 2 -> final warning (blur)
+PASS  final warning blurs the page
+PASS  Return to exam clears the final warning
+PASS  reload while active costs no strike
+PASS  strike 3 -> locked screen
+PASS  locked screen has no message box (D1)
+PASS  attempt is locked with 3 strikes
+PASS  tamper: Submit did nothing
+PASS  tamper: input_while_blocked logged
+PASS  tamper: overlay rebuilt within 250ms
+PASS  tamper: body inert again
+PASS  reload: no second consent screen
+PASS  reload: strikes kept
+PASS  reload logged
+PASS  unlock arrives within 7 s
+PASS  unlock sets strikes to max-1
+PASS  unlock is logged
+PASS  after reload the fullscreen screen is shown
+PASS  Return to fullscreen restores the exam
+PASS  exiting fullscreen shows the fullscreen screen
+PASS  fullscreen exit adds no strike
+PASS  fullscreen exit is logged
+PASS  returning to fullscreen clears the screen again
+PASS  /formResponse -> attempt submitted
+PASS  /formResponse -> DNR rules removed
+PASS  exam tab -> chatgpt.com shows the blocked page in that tab
+PASS  exam tab -> blocked page counts one strike
+PASS  exam tab -> blocked attempt logged once
+PASS  Back to exam returns to the form
+PASS  Back to exam shows the warning naming the site
+PASS  Back to exam is not logged as a reload
+PASS  exam tab -> other site goes back to the form
+PASS  exam tab -> other site counts a strike
+PASS  exam tab -> navigated_away logged
+PASS  record mode: no HUD, no overlay after consent
+PASS  record mode: no DNR rules
+PASS  record mode: strike is counted
+PASS  record mode: new tab is not closed
+PASS  record mode: still no overlay
+
+All checks passed.
+exit=0

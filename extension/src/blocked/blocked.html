@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Blocked during your exam</title>
+  <link rel="stylesheet" href="../shared/pages.css">
+</head>
+<body class="cn">
+  <main class="cn-fullscreen">
+    <section class="cn-modal" role="alertdialog" aria-labelledby="site">
+      <div class="cn-modal__icon">
+        <svg class="cn-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>
+      </div>
+      <span class="cn-chip cn-chip--missing" id="site-chip"><span id="site" class="cn-data"></span></span>
+      <h1 class="cn-h1">Blocked during your exam</h1>
+      <p class="cn-lead" id="note">This attempt was recorded.</p>
+      <div class="cn-status" id="strike-row" hidden>
+        <span class="cn-pips" id="pips" role="img"></span>
+        <span id="strike-text"></span>
+      </div>
+      <div class="cn-modal__actions">
+        <button class="cn-btn cn-btn--primary cn-btn--lg" id="back" type="button">Back to exam</button>
+      </div>
+    </section>
+  </main>
+  <script src="blocked.js"></script>
+</body>
+</html>

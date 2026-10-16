@@ -1,0 +1,67 @@
+
+  dist\src\background\background.js  761.8kb
+
+Done in 37ms
+Built extension/dist with the supabase backend. Load it unpacked from chrome://extensions.
+PASS  sign-up asks the teacher to confirm by email
+PASS  an unconfirmed account cannot sign in
+PASS  the emailed link confirms the account and signs the teacher in
+PASS  a new teacher sees the empty state
+PASS  sign out returns to the sign-in screen
+PASS  teacher A signs in with email and password
+PASS  teacher B signs up, confirms and signs in
+PASS  an edit link (/d/.../edit) is rejected with a message
+PASS  an editor-ID viewform link is rejected too
+PASS  a non-Form link is rejected
+PASS  the published link is accepted
+PASS  the strikes stepper changes the value
+PASS  the allow-list tag is cleaned (desmos.com)
+PASS  Go live opens the D7 dialog with the button disabled
+PASS  Go live is still blocked with one box ticked
+PASS  Go live is enabled with both boxes ticked
+PASS  the test goes live and the monitor opens
+PASS  the monitor shows the empty state before anyone joins
+PASS  the D7 attestation is recorded
+PASS  the list shows the live test
+PASS  teacher B sees none of teacher A's tests
+PASS  teacher B cannot open teacher A's test by URL
+PASS  the student sees the consent screen on the live test
+PASS  the student's exam starts
+PASS  the student appears on the monitor
+PASS  the row shows the student's name, email and unverified badge
+PASS  the row starts Active with no strikes
+PASS  strike 1 shows on the monitor within 2 s of reaching the database (0.36s)
+PASS  the row's status chip follows the student (warned or away)
+PASS  the alert feed shows the strike
+PASS  the lock shows on the monitor within 2 s of reaching the database (0.24s)
+PASS  the row turns Locked with an Unlock button
+PASS  the feed reports the lock
+PASS  the dashboard shows 'Unlock sent'
+PASS  the Unlock button unlocks the student within 6 s (took 5.0s)
+PASS  the row returns to Active with 2 strikes
+PASS  the unlock command was consumed exactly once
+PASS  End shows how many students are still working
+PASS  End warns that unsubmitted answers will be lost
+PASS  End asks the teacher to stop accepting responses in Google Forms first
+PASS  End is blocked until the teacher confirms Google Forms is closed
+PASS  the test shows as Ended
+PASS  the dashboard says how many attempts were closed
+PASS  the student sees the closed screen within about 5 s (took 4.7s)
+PASS  the row shows Closed
+PASS  a submission after End is flagged submitted_after_close
+PASS  the flag appears in the teacher's alert feed
+PASS  the attempt stays closed (the first final status wins)
+PASS  the anon key alone cannot read tests
+PASS  the anon key alone cannot read attempts
+PASS  the anon key alone cannot read events
+PASS  the anon key alone cannot read commands
+PASS  an anonymous (student) session reads no rows from tests
+PASS  an anonymous (student) session reads no rows from attempts
+PASS  an anonymous (student) session reads no rows from events
+PASS  an anonymous (student) session reads no rows from commands
+PASS  teacher B reads none of teacher A's tests
+PASS  teacher B reads none of teacher A's attempts
+PASS  teacher B reads none of teacher A's events
+
+All checks passed.
+exit=0

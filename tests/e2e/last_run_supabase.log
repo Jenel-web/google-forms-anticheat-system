@@ -1,0 +1,63 @@
+
+  dist\src\background\background.js  761.8kb
+
+Done in 41ms
+Built extension/dist with the supabase backend. Load it unpacked from chrome://extensions.
+PASS  unprotected form: nothing appears
+PASS  seeded form is live: consent screen appears
+PASS  exam starts
+PASS  start_attempt created one new attempt
+PASS  attempt row has the typed name and email
+PASS  events reach the database (session_start)
+PASS  new tab -> warning
+PASS  strike 1 reaches the database
+PASS  new tab was closed
+PASS  strike 2 -> final warning
+PASS  strike 3 -> locked screen
+PASS  locked state reaches the database
+PASS  unlock reaches the student within 6 s (took 3.7s)
+PASS  the unlock command was consumed exactly once
+PASS  unlocked: strikes 2, status active in the database
+PASS  unlocked: HUD shows Strikes 2/3
+PASS  worker killed: reload resumes without consent and keeps 2 strikes
+PASS  worker killed: the next strike locks again
+PASS  worker killed: the lock reaches the database
+PASS  worker killed: no events lost (contiguous seq in the database)
+PASS  worker killed: the attempt was never duplicated
+PASS  after a browser restart the consent screen is shown again
+PASS  restart: the same locked attempt is resumed (FR-26)
+PASS  restart: no second attempt (same anonymous identity)
+PASS  restart: unlock works after a restart
+PASS  submit: the attempt ends as submitted
+PASS  submit: the final event reached the database before finish
+PASS  submit: events stay contiguous
+PASS  outage: new exam starts
+PASS  outage: new attempt row
+PASS  outage: the strike still shows locally
+PASS  outage: the API comes back
+PASS  outage: queued events arrive after reconnect
+      (events arrived 5s after the API came back)
+PASS  outage: events carry contiguous sequence numbers
+PASS  outage: strike count reaches the database
+PASS  D12: the outage itself is not penalized (1 strike, not locked)
+PASS  extension disabled: the attempt stays active (not finished)
+PASS  extension disabled: last_heartbeat goes stale
+PASS  closed-in-SQL: reopening the form resumes the same attempt
+PASS  closed-in-SQL: the student sees the closed screen within about 5 s (took 4.8s)
+PASS  closed-in-SQL: the HUD is gone and monitoring stopped
+PASS  closed-in-SQL: the screen can be dismissed
+PASS  closed-in-SQL: the attempt stays closed
+PASS  second exam: consent screen
+PASS  second exam starts
+PASS  a finished attempt does not block a new one
+PASS  End closes the attempt in the database at once
+PASS  the student's HUD goes away within about 5 s (took 5.1s)
+PASS  the student sees the closed screen
+PASS  events before close reached the database
+PASS  second profile: consent screen
+PASS  second profile: exam starts
+PASS  second profile: a new attempt with a different student_uid
+      (4 attempts for this student name, 2 distinct student_uid values)
+
+All checks passed.
+exit=0

@@ -1,0 +1,75 @@
+/* Extension pages (blocked page, dev popup). Tokens from CheatNoNo/tokens.css; components from CheatNoNo/components/bundle.css. */
+:root{
+--surface:#ffffff;--surface-tint:#f2f9ff;--surface-sky:#e3f2fd;--sky-200:#bfe3fb;--sky-300:#8fcdf6;
+--brand:#1b8fe6;--brand-strong:#0b63b5;--brand-deep:#084f93;--on-brand:#ffffff;
+--ink:#0b2545;--ink-muted:#475f7d;--line:#d3e5f5;--line-strong:#6f93b8;--focus:var(--brand-strong);
+--amber:#f6b02c;--warning-bg:#fff3d6;--warning-text:#7a4a00;--danger:#c2331f;--danger-bg:#fdebe7;
+--success:#0a6f7d;--success-bg:#def4f6;
+--shadow-sm:0 1px 2px rgba(11,37,69,0.08), 0 1px 1px rgba(11,37,69,0.04);
+--shadow-lg:0 24px 48px rgba(11,37,69,0.22), 0 6px 12px rgba(11,37,69,0.10);
+--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;
+--radius-sm:8px;--radius-md:12px;--radius-lg:20px;--radius-pill:999px;
+--font-display:"Sora","Avenir Next",system-ui,sans-serif;
+--font-sans:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+--font-mono:"DM Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+[hidden]{display:none!important}
+body.cn{margin:0;font-family:var(--font-sans);font-size:16px;line-height:24px;color:var(--ink);background:var(--surface-sky);-webkit-font-smoothing:antialiased}
+.cn *,.cn *::before,.cn *::after{box-sizing:border-box}
+.cn h1,.cn h2,.cn h3,.cn p{margin:0}
+.cn-h1{font:700 28px/34px var(--font-display);letter-spacing:-.01em}
+.cn-h3{font:600 16px/22px var(--font-display)}
+.cn-lead{font:400 18px/28px var(--font-sans);color:var(--ink-muted)}
+.cn-muted{color:var(--ink-muted)}
+.cn-sm{font:400 14px/20px var(--font-sans)}
+.cn-data{font:500 13px/20px var(--font-mono)}
+.cn-eyebrow{font:600 13px/16px var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--brand-strong)}
+.cn-eyebrow--danger{color:var(--danger)}
+.cn-ico{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.cn :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.cn-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:var(--radius-md);border:1.5px solid transparent;background:var(--surface);color:var(--ink);font:600 16px/24px var(--font-sans);cursor:pointer;white-space:nowrap}
+.cn-btn--primary{background:var(--brand-strong);color:var(--on-brand)}
+.cn-btn--primary:hover{background:var(--brand-deep)}
+.cn-btn--secondary{background:var(--surface);color:var(--brand-strong);border-color:var(--line-strong)}
+.cn-btn--secondary:hover{background:var(--surface-sky)}
+.cn-btn--danger{background:var(--danger);color:var(--on-brand)}
+.cn-btn--lg{min-height:52px;padding:0 28px;font-size:17px}
+.cn-btn--sm{min-height:36px;padding:0 14px;font-size:14px;line-height:20px}
+.cn-btn[disabled]{background:var(--surface-sky);color:var(--ink-muted);cursor:not-allowed}
+.cn-chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:var(--radius-pill);font:600 13px/16px var(--font-sans);white-space:nowrap;border:1.5px solid transparent}
+.cn-chip--active{background:var(--success-bg);color:var(--success)}
+.cn-chip--warned,.cn-chip--away{background:var(--warning-bg);color:var(--warning-text)}
+.cn-chip--locked{background:var(--danger-bg);color:var(--danger)}
+.cn-chip--submitted{background:var(--surface-sky);color:var(--brand-strong)}
+.cn-chip--missing{background:var(--surface);color:var(--ink-muted);border:1.5px dashed var(--line-strong)}
+.cn-pips{display:inline-flex;gap:4px;align-items:center}
+.cn-pip{display:inline-block;width:12px;height:12px;border-radius:var(--radius-pill);border:2px solid var(--line-strong)}
+.cn-pip.is-used{background:var(--danger);border-color:var(--danger)}
+.cn-fullscreen{display:flex;min-height:100vh;padding:var(--space-4);background:var(--surface-sky)}
+.cn-fullscreen>*{margin:auto}
+.cn-modal{width:min(560px,100%);background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-6);display:grid;gap:var(--space-4);justify-items:center;text-align:center}
+.cn-modal__icon{width:56px;height:56px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--danger-bg);color:var(--danger)}
+.cn-modal__icon .cn-ico{width:28px;height:28px}
+.cn-modal__actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.cn-status{display:inline-flex;align-items:center;gap:12px;font:600 14px/20px var(--font-sans)}
+
+/* dev popup */
+.cn-popup{width:420px;max-width:100%;background:var(--surface)}
+.cn-popup__head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--surface-sky);gap:12px}
+.cn-popup__body{padding:var(--space-4);display:grid;gap:var(--space-3)}
+.cn-popup__body h2{font:600 14px/20px var(--font-display);margin:0}
+.cn-field{display:grid;gap:4px}
+.cn-label{font:600 13px/18px var(--font-sans)}
+.cn-input{display:block;width:100%;min-height:36px;padding:6px 10px;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:400 14px/20px var(--font-sans)}
+.cn-input:focus{border-color:var(--brand-strong);outline:3px solid var(--focus);outline-offset:1px}
+.cn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cn-row>.cn-field{flex:1;min-width:110px}
+.cn-banner{padding:8px 12px;border-radius:var(--radius-md);font:400 13px/18px var(--font-sans);background:var(--surface-sky)}
+.cn-banner--danger{background:var(--danger-bg);color:var(--danger)}
+.cn-banner--ok{background:var(--success-bg);color:var(--success)}
+.cn-card{border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);display:grid;gap:6px}
+.cn-kv{display:flex;justify-content:space-between;gap:12px;font:400 13px/18px var(--font-sans)}
+.cn-kv span:first-child{color:var(--ink-muted)}
+.cn-log{max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-md);padding:6px 10px;background:var(--surface-tint)}
+.cn-log div{font:400 12px/18px var(--font-mono);white-space:nowrap}
+.cn-log b{font-weight:600}

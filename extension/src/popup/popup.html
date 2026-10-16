@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CheatNoNo dev panel</title>
+  <link rel="stylesheet" href="../shared/pages.css">
+</head>
+<body class="cn" style="background:var(--surface)">
+  <div class="cn-popup" id="app">
+    <div class="cn-popup__head">
+      <strong class="cn-h3">CheatNoNo <span class="cn-muted">dev panel</span></strong>
+      <span class="cn-chip cn-chip--missing">mock backend</span>
+    </div>
+    <div class="cn-popup__body">
+      <h2>Protect a form</h2>
+      <div class="cn-field">
+        <label class="cn-label" for="url">Published form link (Send &rarr; link)</label>
+        <input class="cn-input" id="url" placeholder="https://docs.google.com/forms/d/e/.../viewform">
+      </div>
+      <div class="cn-field">
+        <label class="cn-label" for="title">Title</label>
+        <input class="cn-input" id="title" value="Practice exam">
+      </div>
+      <div class="cn-row">
+        <div class="cn-field">
+          <label class="cn-label" for="mode">Mode</label>
+          <select class="cn-input" id="mode"><option value="enforce">Enforce</option><option value="record">Record only</option></select>
+        </div>
+        <div class="cn-field">
+          <label class="cn-label" for="max">Max strikes</label>
+          <input class="cn-input" id="max" type="number" min="1" max="10" value="3">
+        </div>
+      </div>
+      <div class="cn-field">
+        <label class="cn-label" for="allow">Allowlist (comma separated domains)</label>
+        <input class="cn-input" id="allow" placeholder="desmos.com, calculator.net">
+      </div>
+      <div class="cn-row">
+        <button class="cn-btn cn-btn--primary cn-btn--sm" id="protect" type="button">Protect this form</button>
+        <button class="cn-btn cn-btn--secondary cn-btn--sm" id="reset" type="button">Reset all data</button>
+      </div>
+      <div class="cn-banner" id="msg" hidden></div>
+
+      <h2>Protected tests</h2>
+      <div id="tests"></div>
+      <h2>Attempts</h2>
+      <div id="attempts"></div>
+      <h2>Event log (newest last)</h2>
+      <div class="cn-log" id="log"></div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { mergeSettings } from '@shared/constants.js';
 import { supabase } from '../supabase.js';
-import { deleteTest, endTest, getAttempt, getTest, listAttempts, recentEvents, unlock } from '../lib/api.js';
+import { alertEvents, deleteTest, endTest, getTest, listAttempts, unlock } from '../lib/api.js';
 import {
-  ALERT_TYPES, countByFilter, describeEvent, initials, isFinal, rowStatus, stillWorking, timeAgo,
+  ALERT_TYPES, countByFilter, initials, isFinal, rowStatus, stillWorking, timeAgo,
 } from '../lib/format.js';
+import { feedSince, mergeAlerts, newFeedState } from '../lib/feed.js';
 import { Link, navigate } from '../router.jsx';
 import { Avatar, Banner, Chip, Empty, Icon, Modal, Pips } from '../ui.jsx';
 
@@ -62,8 +63,8 @@ export default function Monitor({ initialTest }) {
   const [sent, setSent] = useState({});
   const [notice, setNotice] = useState('');
   const known = useRef(new Map()); // attempt id -> attempt, used to name people in the feed
-  const seen = useRef(new Set());
-  const feedLoaded = useRef(false);
+  const feedState = useRef(newFeedState());
+  const refreshTimer = useRef(null);
 
   const live = test.status === 'live';
   const maxStrikes = mergeSettings(test.settings).maxStrikes;
@@ -88,16 +89,9 @@ export default function Monitor({ initialTest }) {
       setLoaded(true);
       setOffline(false);
       setLastUpdate(new Date());
-      if (!feedLoaded.current) {
-        feedLoaded.current = true;
-        const events = await recentEvents(rows.map((a) => a.id), ALERT_TYPES);
-        const entries = [];
-        for (const ev of events) {
-          const d = describeEvent(ev, known.current.get(ev.attempt_id)?.student_name || 'A student');
-          if (d) { seen.current.add(ev.id); entries.push({ id: ev.id, t: ev.t, ...d }); }
-        }
-        pushFeed(entries);
-      }
+      const alerts = await alertEvents(test.id, ALERT_TYPES, feedSince(feedState.current));
+      const entries = mergeAlerts(alerts, feedState.current, (id) => known.current.get(id)?.student_name || 'A student');
+      if (entries.length) pushFeed(entries);
     } catch {
       setOffline(true);
     }
@@ -109,28 +103,21 @@ export default function Monitor({ initialTest }) {
     return () => clearInterval(poll);
   }, [reload]);
 
-  const addEvent = useCallback(async (ev) => {
-    if (!ev || seen.current.has(ev.id)) return;
-    let attempt = known.current.get(ev.attempt_id);
-    if (!attempt) {
-      const row = await getAttempt(ev.attempt_id).catch(() => null);
-      if (!row || row.test_id !== test.id) return; // an event from one of this teacher's other tests
-      known.current.set(row.id, row);
-      attempt = row;
-      reload();
-    }
-    const d = describeEvent(ev, attempt.student_name);
-    if (!d) return;
-    seen.current.add(ev.id);
-    pushFeed([{ id: ev.id, t: ev.t, ...d }]);
-  }, [test.id, reload, pushFeed]);
+  // A status change arriving over Realtime means something worth a feed line probably just happened: refresh now
+  // instead of waiting for the next 5 s poll.
+  const refreshSoon = useCallback(() => {
+    clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(reload, 700);
+  }, [reload]);
 
   useEffect(() => {
     const channel = supabase.channel(`monitor-${test.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attempts', filter: `test_id=eq.${test.id}` }, (payload) => {
         const row = payload.new;
         if (!row || !row.id) return;
-        known.current.set(row.id, { ...(known.current.get(row.id) || {}), ...row });
+        const before = known.current.get(row.id);
+        known.current.set(row.id, { ...(before || {}), ...row });
+        if (!before || before.status !== row.status || before.strikes !== row.strikes) refreshSoon();
         setAttempts((prev) => {
           const i = prev.findIndex((a) => a.id === row.id);
           if (i < 0) return [...prev, row];
@@ -140,10 +127,9 @@ export default function Monitor({ initialTest }) {
         });
         setLastUpdate(new Date());
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, (payload) => addEvent(payload.new))
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [test.id, addEvent]);
+    return () => { supabase.removeChannel(channel); clearTimeout(refreshTimer.current); };
+  }, [test.id, refreshSoon]);
 
   // an "Unlock sent" label lasts only while the attempt is still locked
   useEffect(() => {

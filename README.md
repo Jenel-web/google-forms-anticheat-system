@@ -233,6 +233,7 @@ python tests/e2e/run_e2e.py                                      # extension, mo
 python tests/e2e/run_e2e_supabase.py                             # extension against the real database
 python tests/e2e/run_e2e_dashboard.py                            # teacher dashboard, two teachers and a live student
 python tests/e2e/run_e2e_reports.py                              # score, timeline, CSV and reconciliation
+node tests/load/load.mjs                                         # 60 simulated students (see tests/load/README.md)
 ```
 
 The headed end-to-end tests take over a Chrome window for several minutes. Don't click or close it while they run.
@@ -246,4 +247,4 @@ Working rules for contributors are in [CLAUDE.md](CLAUDE.md).
 | M2 | Supabase backend, resume after restart | Done |
 | M3 | Teacher dashboard: tests, go live, live monitor, unlock, end test | Done |
 | M4 | Timeline, integrity score, report, heatmap, CSV, reconciliation | Done |
-| M5 | Student onboarding page, Chrome Web Store listing, PDF export, automatic data retention, accessibility review | Done |
+| M5 | Student onboarding page, Chrome Web Store listing, PDF export, automatic data retention, accessibility review | DoneNo, no.  |

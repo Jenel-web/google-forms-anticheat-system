@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js';
+import { FEED_INITIAL } from './feed.js';
 
 // Every call returns data or throws an Error whose message is safe to show.
 function unwrap({ data, error }) {
@@ -36,14 +37,15 @@ export const endTest = async (id) => unwrap(await supabase.rpc('end_test', { p_t
 export const listAttempts = async (testId) =>
   unwrap(await supabase.from('attempts').select('*').eq('test_id', testId).order('started_at'));
 
-export const getAttempt = async (id) =>
-  unwrap(await supabase.from('attempts').select('id, test_id, student_name').eq('id', id).maybeSingle());
-
-export const recentEvents = async (attemptIds, types, limit = 40) =>
-  attemptIds.length
-    ? unwrap(await supabase.from('events').select('id, attempt_id, type, t, data').in('attempt_id', attemptIds)
-      .in('type', types).order('t', { ascending: false }).limit(limit))
-    : [];
+// The alert feed (see lib/feed.js). First call (since = null): the most recent alerts. Later calls: every alert that
+// arrived at or after `since`, oldest first.
+export const alertEvents = async (testId, types, since) => {
+  const base = () => supabase.from('events')
+    .select('id, attempt_id, type, t, received_at, data, attempts!inner(test_id)')
+    .eq('attempts.test_id', testId).in('type', types);
+  if (!since) return unwrap(await base().order('id', { ascending: false }).limit(FEED_INITIAL));
+  return allPages(() => base().gte('received_at', since).order('id'));
+};
 
 export const unlock = async (attemptId) =>
   unwrap(await supabase.from('commands').insert({ attempt_id: attemptId, type: 'unlock' }));

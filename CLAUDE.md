@@ -90,6 +90,7 @@ tests/e2e/run_e2e.py                Playwright e2e for the extension (mock backe
 tests/e2e/run_e2e_supabase.py       Playwright e2e against the local Supabase stack (M2 acceptance)
 tests/e2e/run_e2e_dashboard.py      Phase 4 gate: two teachers + one live student
 tests/e2e/run_e2e_reports.py        Phase 5 gate: score, timeline, gaps, CSV, reconciliation, 500 events (headless)
+tests/load/load.mjs                 60 simulated students: start storm, all locked, unlock all, outage burst, end test (see tests/load/README.md)
 ```
 
 ## Commands

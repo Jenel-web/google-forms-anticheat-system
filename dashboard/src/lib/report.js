@@ -67,6 +67,8 @@ function describe(e, maxStrikes) {
     case 'tab_switch': case 'tab_opened': case 'tab_navigated': case 'other_window': case 'left_browser':
     case 'navigated_away': case 'exam_tab_closed':
       return { tone: 'warn', icon: 'leave', title: REASON_TEXT[e.type] ? `Student ${REASON_TEXT[e.type]}` : e.type.replace(/_/g, ' '), minor: true };
+    case 'events_capped': return { tone: 'info', icon: 'copy-block', title: 'Repeated events summarized',
+      detail: `${d.dropped ?? '?'} more ${String(d.kind || 'similar').replace(/_/g, ' ')} events in that minute were counted, not listed` };
     case 'strike': case 'returned': case 'connection_gap': return null; // built from episodes and gaps below
     default: return { tone: 'info', icon: 'help', title: String(e.type).replace(/_/g, ' '), minor: true };
   }

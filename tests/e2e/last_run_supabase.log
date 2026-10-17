@@ -1,8 +1,8 @@
 
-  dist\src\background\background.js  762.5kb
+  dist\src\background\background.js  765.5kb
 
-Done in 238ms
-Built extension/dist with the supabase backend. Load it unpacked from chrome://extensions.
+Done in 35ms
+Built extension/dist with the supabase backend (local stack). Load it unpacked from chrome://extensions.
 PASS  unprotected form: nothing appears
 PASS  seeded form is live: consent screen appears
 PASS  exam starts
@@ -28,6 +28,8 @@ PASS  after a browser restart the consent screen is shown again
 PASS  restart: the same locked attempt is resumed (FR-26)
 PASS  restart: no second attempt (same anonymous identity)
 PASS  restart: unlock works after a restart
+PASS  cap: 25 rapid paste attempts store only 10 events
+PASS  cap: the other 15 are summarised as one events_capped event when the exam ends
 PASS  submit: the attempt ends as submitted
 PASS  submit: the final event reached the database before finish
 PASS  submit: events stay contiguous
@@ -36,7 +38,7 @@ PASS  outage: new attempt row
 PASS  outage: the strike still shows locally
 PASS  outage: the API comes back
 PASS  outage: queued events arrive after reconnect
-      (events arrived 1s after the API came back)
+      (events arrived 4s after the API came back)
 PASS  D12/Phase 5: the outage is recorded as one connection_gap event of about a minute
 PASS  outage: events carry contiguous sequence numbers
 PASS  outage: strike count reaches the database
@@ -52,12 +54,12 @@ PASS  second exam: consent screen
 PASS  second exam starts
 PASS  a finished attempt does not block a new one
 PASS  End closes the attempt in the database at once
-PASS  the student's HUD goes away within about 5 s (took 5.1s)
+PASS  the student's HUD goes away within about 5 s (took 4.8s)
 PASS  the student sees the closed screen
 PASS  events before close reached the database
 PASS  second profile: consent screen
 PASS  second profile: exam starts
 PASS  second profile: a new attempt with a different student_uid
-      (11 attempts for this student name, 6 distinct student_uid values)
+      (25 attempts for this student name, 14 distinct student_uid values)
 
 All checks passed.

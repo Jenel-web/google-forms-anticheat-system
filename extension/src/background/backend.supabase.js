@@ -9,6 +9,7 @@ const STATE_KEY = 'eg_sb_state';
 const FLUSH_MS = 2000;
 const FLUSH_AT = 20;
 const BATCH_MAX = 50;
+const BATCH_PAUSE_MS = 150; // pause between consecutive batches (plus up to the same again, random)
 const BACKOFF_MAX_MS = 30000;
 const HEARTBEAT_DEBOUNCE_MS = 300;
 const REQUEST_TIMEOUT_MS = 10000;
@@ -67,7 +68,7 @@ async function rpc(name, args) {
 
 // ------------------------------------------------------------------ persisted state: event queue, seq, pending finish
 
-let state = { queue: [], seq: {}, finish: {}, lastOk: {} };
+let state = { queue: [], seq: {}, finish: {}, lastOk: {}, unlocksSeen: {} };
 const loading = chrome.storage.local.get(STATE_KEY).then((res) => {
   const stored = res[STATE_KEY];
   if (stored) {
@@ -76,9 +77,10 @@ const loading = chrome.storage.local.get(STATE_KEY).then((res) => {
       seq: stored.seq || {},
       finish: stored.finish || {},
       lastOk: stored.lastOk || {}, // attemptId -> ms of the last heartbeat the server accepted (D12 gap detection)
+      unlocksSeen: stored.unlocksSeen || {}, // attemptId -> how many unlocks this browser has been told about
     };
   }
-  if (state.queue.length || Object.keys(state.finish).length) scheduleFlush(0);
+  if (state.queue.length || Object.keys(state.finish).length) scheduleFlush(Math.random() * 2000); // not all at once
 });
 
 async function persist() {
@@ -131,6 +133,8 @@ async function flushOnce() {
     }
     state.queue = state.queue.filter((item) => !batch.includes(item));
     await persist();
+    // a long queue (after an outage) goes out as a paced trickle of batches, not one burst
+    if (state.queue.length) await new Promise((r) => setTimeout(r, BATCH_PAUSE_MS + Math.random() * BATCH_PAUSE_MS));
   }
   for (const [attemptId, status] of Object.entries(state.finish)) {
     try {
@@ -141,6 +145,7 @@ async function flushOnce() {
     delete state.finish[attemptId];
     delete state.seq[attemptId];
     delete state.lastOk[attemptId];
+    delete state.unlocksSeen[attemptId];
     await persist();
   }
 }
@@ -152,7 +157,8 @@ export function flush() {
       .then(() => { backoff = FLUSH_MS; })
       .catch((err) => {
         backoff = Math.min(backoff * 2, BACKOFF_MAX_MS);
-        scheduleFlush(backoff);
+        // jitter: after a shared outage every student's retry would otherwise land on the server together
+        scheduleFlush(Math.round(backoff * (0.5 + Math.random())));
         throw err;
       })
       .finally(() => { flushing = null; });
@@ -187,6 +193,9 @@ export async function createAttempt({ formId, student }) {
     p_ext_version: chrome.runtime.getManifest().version,
   });
   latest[row.id] = { status: row.status, strikes: row.strikes, q: null };
+  await loading;
+  state.unlocksSeen[row.id] = row.unlocked_seq ?? 0; // the server's count is what this browser starts from, also on resume
+  await persist();
   return { id: row.id, strikes: row.strikes, status: row.status, resumed: row.last_heartbeat !== row.started_at };
 }
 
@@ -236,13 +245,21 @@ async function noteHeartbeatOk(attemptId, q) {
 async function sendHeartbeat(attemptId) {
   const cur = latest[attemptId];
   if (!cur) return;
+  await loading;
   const res = await rpc('heartbeat', {
     p_attempt_id: attemptId, p_status: cur.status, p_strikes: cur.strikes, p_q: cur.q || null,
+    p_unlocks_seen: state.unlocksSeen[attemptId] ?? null, // null = unknown: the server then never repeats an unlock
   });
   await noteHeartbeatOk(attemptId, cur.q);
   if (!res) return;
-  for (const cmd of res.commands || []) {
-    for (const h of handlers) await h({ type: cmd.type, attemptId });
+  // An unlock arrives as a command, or as `unlock: true` when this browser missed the response that carried it.
+  // The background handler ignores it unless the exam is locked, so a repeat is harmless.
+  if (res.unlock === true || (res.commands || []).some((c) => c.type === 'unlock')) {
+    for (const h of handlers) await h({ type: 'unlock', attemptId });
+  }
+  if (typeof res.unlocks === 'number' && state.unlocksSeen[attemptId] !== res.unlocks) {
+    state.unlocksSeen[attemptId] = res.unlocks; // only after the unlock was applied, so a worker crash in between repeats it
+    await persist();
   }
   if (res.closed) {
     for (const h of handlers) await h({ type: 'closed', attemptId });

@@ -102,3 +102,11 @@ test('500 events build a timeline quickly', () => {
   assert.equal(items.length, 500);
   assert.ok(performance.now() - start < 250, 'analysis + timeline for 500 events should take well under 250 ms');
 });
+
+test('a capped burst shows as one summary line, and does not change the score', () => {
+  const events = [ev('session_start', 0), ev('paste_attempt', 5), ev('events_capped', 70, { data: { kind: 'paste_attempt', dropped: 40, seconds: 60 } })];
+  const { items, analysis } = buildTimeline(events);
+  const line = items.find((i) => i.title === 'Repeated events summarized');
+  assert.match(line.detail, /^40 more paste attempt events/);
+  assert.equal(analysis.score, 98); // only the one stored paste attempt counts
+});

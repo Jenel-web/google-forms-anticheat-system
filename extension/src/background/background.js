@@ -3,6 +3,7 @@ import {
   EXAM_HOSTS, mergeSettings, parseFormId, isFormResponseUrl, hostOf, domainMatches, entryMatchesUrl,
   phaseForStrikes, isValidEmail,
 } from '../shared/constants.js';
+import { allowEvent, endedSummaries } from '../shared/throttle.js';
 
 // ---------------------------------------------------------------- session store
 // The MV3 worker can die at any time: every mutation goes through withSessions (mutex + load/save).
@@ -63,9 +64,23 @@ function cleanDetail(detail) {
   return JSON.stringify(out).length < 1500 ? out : {};
 }
 
-function log(s, type, detail = {}) {
+function emit(s, type, detail = {}) {
   const ev = { attemptId: s.attemptId, t: new Date().toISOString(), type, q: s.q || null, ...detail };
   backend.appendEvent(ev).catch(() => {});
+}
+
+// Noisy event types are capped per minute (shared/throttle.js); what was dropped is summarised as one `events_capped`.
+function log(s, type, detail = {}) {
+  s.throttle = s.throttle || {}; // lives in the session, so a worker restart does not reset the window
+  const gate = allowEvent(s.throttle, type, Date.now());
+  gate.summaries.forEach((x) => emit(s, 'events_capped', { kind: x.kind, dropped: x.dropped, seconds: 60 }));
+  if (gate.allow) emit(s, type, detail);
+}
+
+// Summaries for windows that ended with no further event (heartbeat), or all of them when the session ends.
+function flushCapped(s, force = false) {
+  if (!s.throttle) return;
+  endedSummaries(s.throttle, Date.now(), force).forEach((x) => emit(s, 'events_capped', { kind: x.kind, dropped: x.dropped, seconds: 60 }));
 }
 
 function statusFor(s) {
@@ -203,6 +218,7 @@ function withClosed(fn) {
 }
 
 async function endSession(sessions, s, status) {
+  flushCapped(s, true);
   log(s, status === 'submitted' ? 'submitted' : 'closed');
   if (status === 'closed' && s.tabId != null) {
     await withClosed(async (map) => {
@@ -567,6 +583,7 @@ async function handleHeartbeat(msg, sender) {
     if (!s) return null;
     s.fullscreen = !!msg.fullscreen;
     await maybeCloseEpisode(s); // safety net if a focus event was missed
+    flushCapped(s);
     return { attemptId: s.attemptId, status: statusFor(s), strikes: s.strikes, q: s.q };
   });
   if (!info) return { ok: false };

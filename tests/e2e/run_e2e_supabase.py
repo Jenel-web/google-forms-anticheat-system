@@ -314,7 +314,19 @@ def flow_b(ctx, helper, teacher):
 
     teacher.unlock(old_attempt["id"])
     check("restart: unlock works after a restart", wait_until(lambda: overlay(page, "Your exam is paused").count() == 0, timeout=10))
+    def typed(kind):
+        return teacher.get(f"/rest/v1/events?select=data&attempt_id=eq.{old_attempt['id']}&type=eq.{kind}")
+
+    pastes_before = len(typed("paste_attempt"))
+    page.evaluate("for (let i = 0; i < 25; i++) document.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true }))")
+    pause(3)
+    check("cap: 25 rapid paste attempts store only 10 events",
+          wait_until(lambda: len(typed("paste_attempt")) - pastes_before == 10, timeout=10),
+          str(len(typed("paste_attempt")) - pastes_before))
     page.goto(RESPONSE_URL)
+    check("cap: the other 15 are summarised as one events_capped event when the exam ends",
+          wait_until(lambda: [e["data"].get("dropped") for e in typed("events_capped") if e["data"].get("kind") == "paste_attempt"] == [15], timeout=10),
+          str([e["data"] for e in typed("events_capped")]))
     check("submit: the attempt ends as submitted",
           wait_until(lambda: teacher.latest()["status"] == "submitted" and teacher.latest()["ended_at"], timeout=10), str(teacher.latest()))
     check("submit: the final event reached the database before finish",
@@ -407,6 +419,9 @@ def flow_c(ctx, helper, teacher):
     check("a finished attempt does not block a new one",
           wait_until(lambda: teacher.latest()["id"] != before["id"] and teacher.latest()["status"] == "active", timeout=8))
     cur = teacher.latest()
+    # A teacher ends a test long after students start. Ending it within a few hundred milliseconds of the attempt appearing races the
+    # extension's first upload, and the server rejects events for a closed attempt, so wait until the first events are stored.
+    wait_until(lambda: "session_start" in [e["type"] for e in teacher.events(cur["id"])], timeout=8)
     sent = time.time()
     teacher.set_test_status("ended")
     check("End closes the attempt in the database at once", wait_until(lambda: teacher.latest()["status"] == "closed", timeout=3), str(teacher.latest()))

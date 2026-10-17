@@ -50,25 +50,26 @@ call. The shape of the behaviour is what carries over.
 | Realistic reconnect burst (10 queued events per student, 600 total) | Written in 0.2 s. The dashboard caught up in about 2.7 s. |
 | **Extreme reconnect burst (100 per student, 6,000 total)** | The database took all of it in 0.3 s. The live monitor did not keep up: Realtime needed 9 to 13 s to drain, status updates queued behind it, and in one of three runs about 1,000 event messages were never delivered to the dashboard. |
 
-## Findings and what to do
+## Findings and what was done
 
-1. **The server absorbs a class easily. The weak spot is the live feed under an extreme burst.** A flood of event rows
-   (thousands at once) slows Realtime for everything, including status updates. Subscribing only to alert event types
-   (`FEED=alerts`) cut the data sent to the browser to nothing, but did not remove the delay (status updates still took
-   about 12.8 s to catch up in that run), so the cause is Realtime reading every inserted row, not the size of the
-   messages. Realistic bursts are fine. If you want to remove the risk: stop streaming `events` through Realtime and have
-   the alert feed poll for new alert events every 5 s, as the status table already does. I have not built that.
-2. **The status table is protected by the 5 s poll.** The poll reads the database directly, so even while Realtime lags
-   the table is never more than about 5 s stale (60 of 60 locked on the poll in 5 ms). The alert feed has no such
-   fallback: it loads history once and then relies on Realtime, so a dropped message is not recovered until a reload.
-3. **Unlock and End take up to 5 s to reach a student.** This is the heartbeat interval. It is the same at 1 student or
-   60, so nothing gets worse with class size.
-4. **Not testable locally: the anonymous sign-in limit.** Supabase limits anonymous sign-ins per hour per IP address
-   (the config shows 30). The local stack does not enforce it, so all 60 started in every run. A hosted project does, so
-   students sharing one school IP could be blocked from starting. Check and raise it under Authentication, Rate Limits
-   before an exam in a lab.
-5. **Hosted free tier will be slower and stricter than this run.** Realtime has message-rate and connection caps there
-   (look up the current numbers on your plan). Run this script with `--allow-hosted` and 25 students to see it for real.
-6. **Not tested: a lost unlock.** If a student's connection drops at the exact moment their unlock is handed over, the
-   command counts as delivered but the student never got it. Reproducing it needs a network failure at a precise
-   moment, so it is untested.
+1. **The live feed lagged under an extreme burst (fixed).** Thousands of event rows at once slowed Realtime for everything,
+   including status updates, and in one run dropped about 1,000 event messages. Events no longer go through Realtime: the
+   dashboard's alert feed polls the database (every 5 s, and 0.7 s after a status change arrives live). Re-run with the
+   same 6,000-event burst: status updates caught up in about 1 s (was 12.8 s or never), and the feed showed 132 of 132
+   alerts. `FEED=alerts` (filtering the stream instead) did not help, because Realtime reads every inserted row.
+2. **The status table was already protected by the 5 s poll**, which reads the database directly.
+3. **Unlock and End take up to 5 s to reach a student.** This is the heartbeat interval, the same at 1 or 60 students.
+4. **A lost unlock is repaired (fixed).** If the response carrying an unlock was lost, the student stayed locked while the
+   dashboard said "Unlock sent". The server now counts the unlocks it applied and re-sends a missed one. In this test 6 of
+   60 students "lost" the response and all 6 were unlocked by the next heartbeat (up to about 10 s instead of 5 s). The
+   dashboard label also expires after 15 s so the teacher can click again.
+5. **Noisy events are capped (done).** At most 10 copy, paste, right-click or shortcut events per minute are stored per
+   student (30 for tab flicker, 60 for question changes); the rest become one "events_capped" summary. Retries now use
+   jitter and long queues go out paced, so students do not all hit the server together after an outage.
+6. **Not testable locally: the anonymous sign-in limit.** Supabase limits anonymous sign-ins per hour per IP address (the
+   config shows 30), but the local stack does not enforce it, so all 60 started in every run. A hosted project does, so
+   students sharing one school IP could be blocked from starting. Check and raise it under Authentication, Rate Limits.
+7. **Hosted free tier will be slower and stricter than this run.** Run this script with `--allow-hosted` and 25 students.
+8. **Still open: events for a closed attempt are rejected.** Events from the last ~2 s before End, and the backlog of a
+   student who was offline when the test ended, are lost. Letting the server accept events dated before the close time
+   would fix it.

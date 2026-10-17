@@ -1,7 +1,7 @@
 
-  dist\src\background\background.js  762.7kb
+  dist\src\background\background.js  765.5kb
 
-Done in 133ms
+Done in 35ms
 Built extension/dist with the supabase backend (local stack). Load it unpacked from chrome://extensions.
 PASS  sign-up asks the teacher to confirm by email
 PASS  an unconfirmed account cannot sign in
@@ -30,14 +30,14 @@ PASS  the student's exam starts
 PASS  the student appears on the monitor
 PASS  the row shows the student's name, email and unverified badge
 PASS  the row starts Active with no strikes
-PASS  strike 1 shows on the monitor within 2 s of reaching the database (0.11s)
+PASS  strike 1 shows on the monitor within 2 s of reaching the database (0.00s)
 PASS  the row's status chip follows the student (warned or away)
 PASS  the alert feed shows the strike
-PASS  the lock shows on the monitor within 2 s of reaching the database (0.56s)
+PASS  the lock shows on the monitor within 2 s of reaching the database (0.43s)
 PASS  the row turns Locked with an Unlock button
 PASS  the feed reports the lock
 PASS  the dashboard shows 'Unlock sent'
-PASS  the Unlock button unlocks the student within 6 s (took 3.9s)
+PASS  the Unlock button unlocks the student within 6 s (took 3.7s)
 PASS  the row returns to Active with 2 strikes
 PASS  the unlock command was consumed exactly once
 PASS  End shows how many students are still working
@@ -46,7 +46,7 @@ PASS  End asks the teacher to stop accepting responses in Google Forms first
 PASS  End is blocked until the teacher confirms Google Forms is closed
 PASS  the test shows as Ended
 PASS  the dashboard says how many attempts were closed
-PASS  the student sees the closed screen within about 5 s (took 4.3s)
+PASS  the student sees the closed screen within about 5 s (took 4.5s)
 PASS  the row shows Closed
 PASS  a submission after End is flagged submitted_after_close
 PASS  the flag appears in the teacher's alert feed

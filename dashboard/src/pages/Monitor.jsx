@@ -11,6 +11,8 @@ import { Avatar, Banner, Chip, Empty, Icon, Modal, Pips } from '../ui.jsx';
 
 const COLS = 'minmax(0,1fr) 150px 96px 110px 84px 96px';
 const POLL_MS = 5000;
+// "Unlock sent" is shown for this long; a student still locked after it can be unlocked again (a dropped connection can lose one).
+const UNLOCK_SENT_MS = 15000;
 const FILTERS = [
   ['all', 'All'], ['active', 'Active'], ['away', 'Away'], ['warned', 'Warned'], ['locked', 'Locked'],
   ['submitted', 'Submitted'], ['closed', 'Closed'], ['noheartbeat', 'No heartbeat'],
@@ -145,7 +147,7 @@ export default function Monitor({ initialTest }) {
     setNotice('');
     try {
       await unlock(attempt.id);
-      setSent((s) => ({ ...s, [attempt.id]: true }));
+      setSent((s) => ({ ...s, [attempt.id]: Date.now() }));
     } catch (e) {
       setNotice(e.message);
     }
@@ -263,7 +265,7 @@ export default function Monitor({ initialTest }) {
                     <span data-label="Last seen" className="cn-data">{isFinal(a.status) ? '–' : timeAgo(now - Date.parse(a.last_heartbeat))}</span>
                     <span>
                       {canUnlock ? (
-                        sent[a.id]
+                        sent[a.id] && now - sent[a.id] < UNLOCK_SENT_MS
                           ? <span className="cn-sm cn-muted">Unlock sent</span>
                           : <button className="cn-btn cn-btn--primary cn-btn--sm" type="button" onClick={() => doUnlock(a)}><Icon name="unlock" />Unlock</button>
                       ) : null}

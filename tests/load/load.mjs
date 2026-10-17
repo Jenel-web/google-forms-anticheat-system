@@ -142,6 +142,9 @@ class Student {
     this.unlockedAt = null;
     this.firstBatch = null;
     this.ready = false;
+    this.unlocksSeen = null; // how many unlocks this student has been told about (the extension keeps this in storage)
+    this.dropUnlockResponse = false; // simulate a connection that drops just as the unlock response is sent
+    this.repaired = false;
   }
 
   async start() {
@@ -156,6 +159,7 @@ class Student {
     }));
     if (a.error) return false;
     this.id = a.data.id;
+    this.unlocksSeen = a.data.unlocked_seq ?? 0;
     this.ready = true;
     return true;
   }
@@ -199,11 +203,15 @@ class Student {
     sentAt.set(mk, now());
     const res = await timed('heartbeat', () => this.client.rpc('heartbeat', {
       p_attempt_id: this.id, p_status: this.status, p_strikes: this.strikes, p_q: { i: this.qi, n: 20, mk },
+      p_unlocks_seen: this.unlocksSeen,
     }));
     if (res.error || !res.data) return;
     const d = res.data;
+    const unlockInResponse = d.unlock === true || (d.commands || []).some((c) => c.type === 'unlock');
+    if (unlockInResponse && this.dropUnlockResponse) { this.dropUnlockResponse = false; return; } // the response never arrives
     if (d.closed && this.closedAt === null) this.closedAt = now();
-    if ((d.commands || []).some((c) => c.type === 'unlock') && this.unlockedAt === null) this.unlockedAt = now();
+    if (unlockInResponse && this.unlockedAt === null) { this.unlockedAt = now(); if (d.unlock === true && !(d.commands || []).length) this.repaired = true; }
+    if (typeof d.unlocks === 'number') this.unlocksSeen = d.unlocks;
     if (!d.finished) { this.status = d.status; this.strikes = d.strikes; }
   }
 
@@ -330,6 +338,8 @@ async function main() {
   phase = 'D unlock all';
   log(`\n[D] teacher unlocks all ${tCount} students at the same moment (${tCount} rapid clicks)`);
   students.forEach((s) => { s.unlockedAt = null; });
+  const dropped = students.filter((_, i) => i % 10 === 3); // 10% lose the response that carries their unlock
+  dropped.forEach((s) => { s.dropUnlockResponse = true; });
   const tD = now();
   await Promise.all(students.map(async (s) => {
     const t = now();
@@ -344,6 +354,9 @@ async function main() {
   const cmds = await teacher.from('commands').select('attempt_id, consumed_at').in('attempt_id', students.map((s) => s.id));
   const consumed = (cmds.data || []).filter((c) => c.consumed_at).length;
   log(`  commands consumed exactly once: ${consumed}/${(cmds.data || []).length}`);
+  const repairedCount = students.filter((s) => s.repaired).length;
+  log(`  ${dropped.length} students lost the unlock response (dropped connection); ${repairedCount} were repaired by the next heartbeat and ${dropped.filter((s) => s.unlockedAt === null).length} are still locked`);
+  if (dropped.some((s) => s.unlockedAt === null)) note(`${dropped.filter((s) => s.unlockedAt === null).length} students whose unlock response was lost were never unlocked.`);
   if (unlockLat.length < tCount) note(`${tCount - unlockLat.length} unlock commands were not delivered within 25 s.`);
   if (consumed !== (cmds.data || []).length) note(`${(cmds.data || []).length - consumed} unlock commands were not consumed.`);
   const stillLocked = students.filter((s) => s.status === 'locked').length;

@@ -39,12 +39,21 @@ Before writing any code, creating components, or building frontend screens, you 
   heartbeat is accepted after more than 30 s of silence (`backend.supabase.js`); gaps are shown, never scored. Covered by
   `tests/e2e/run_e2e_reports.py` (headless, seeds data by SQL) plus unit tests. Not built: PDF export, answer-correlation (needs
   answer data, which D6/NFR-1 rule out), data-retention setting (D14), onboarding page (FR-34).
+- **Production hardening (after the 60-student load test, `tests/load/README.md`):** (1) `events` left the realtime
+  publication; the dashboard alert feed polls `alertEvents` every 5 s and 0.7 s after a Realtime status change
+  (`dashboard/src/lib/feed.js`). (2) Safe unlock: `attempts.unlocked_seq`; `heartbeat` takes `p_unlocks_seen` and returns
+  `unlock` (bool) + `unlocks` (count), so an unlock whose response was lost is handed over again; the extension keeps
+  `unlocksSeen` in `chrome.storage.local`; the dashboard's "Unlock sent" label expires after 15 s. (3) Event caps:
+  `extension/src/shared/throttle.js` limits noisy event types per attempt per minute and summarises the rest as one
+  `events_capped` event; failed flushes retry with jitter and long queues go out paced. Migrations
+  `events_feed_polling` and `safe_unlock`. Known gap: the server rejects events for a closed attempt, so events from the
+  last ~2 s before End, or an offline student's backlog, are lost.
 - **Local auth config:** `supabase/config.toml` has `enable_confirmations = true`; confirmation emails are read from Mailpit
   (http://127.0.0.1:54324). After changing config.toml run `supabase stop && supabase start`.
 - The Supabase build is `extension/dist/` (load that unpacked). `extension/` itself still runs with the mock backend.
 - Schema deviations from PRD §8: `events` has `seq` (unique per attempt, makes retried batches idempotent) and
   `received_at`; `commands` insert policy also checks test ownership; one open attempt per student per test is enforced
-  by a unique index. `heartbeat` returns `{status, strikes, commands:[{id,type}], closed, finished}`; an unlock applies
+  by a unique index. `heartbeat` returns `{status, strikes, commands:[{id,type}], closed, finished, unlock, unlocks}`; an unlock applies
   only to a locked attempt and sets `strikes = least(reported, maxStrikes - 1)`.
 
 ## Product decisions you must respect (PRD §13)

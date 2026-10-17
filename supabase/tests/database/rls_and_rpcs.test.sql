@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(58);
+select plan(71);
 
 -- fixtures (as postgres). T1 + the live test 'seed-form-id-local-dev' come from seed.sql.
 insert into auth.users (id, instance_id, aud, role, email, is_anonymous) values
@@ -106,6 +106,46 @@ select is(current_setting('test.hb1')::jsonb ->> 'status', 'active', 'unlock set
 select is((current_setting('test.hb1')::jsonb ->> 'strikes')::int, 2, 'unlock sets strikes to max - 1');
 select is(jsonb_array_length(public.heartbeat(current_setting('test.a1')::uuid, 'active', 2) -> 'commands'), 0,
   'the command is consumed exactly once');
+
+-- ---------- an unlock survives a dropped response ----------
+-- (student 1 is active with 1 unlock applied so far)
+select set_config('test.s1', public.heartbeat(current_setting('test.a1')::uuid, 'locked', 3, null, 1)::text, true);
+select is(current_setting('test.s1')::jsonb ->> 'status', 'locked', 'a fresh lock reported with the current unlock count is accepted');
+select is((current_setting('test.s1')::jsonb ->> 'unlock')::boolean, false, 'a fresh lock is not mistaken for a missed unlock');
+
+reset role;
+do $$ begin perform set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated","is_anonymous":false}', true); end $$;
+set local role authenticated;
+select lives_ok(format($f$insert into public.commands (attempt_id, type) values (%L, 'unlock')$f$, current_setting('test.a1')),
+  'teacher unlocks the student again');
+reset role;
+do $$ begin perform set_config('request.jwt.claims', '{"sub":"bbbbbbbb-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":true}', true); end $$;
+set local role authenticated;
+
+-- this response is "lost": the student never sees it
+select set_config('test.s2', public.heartbeat(current_setting('test.a1')::uuid, 'locked', 3, null, 1)::text, true);
+select is((current_setting('test.s2')::jsonb ->> 'unlock')::boolean, true, 'the server applies the unlock');
+select is((current_setting('test.s2')::jsonb ->> 'unlocks')::int, 2, 'and counts it');
+
+-- the student still believes they are locked and has seen only 1 unlock
+select set_config('test.s3', public.heartbeat(current_setting('test.a1')::uuid, 'locked', 3, null, 1)::text, true);
+select is((current_setting('test.s3')::jsonb ->> 'unlock')::boolean, true, 'the missed unlock is handed over again');
+select is(current_setting('test.s3')::jsonb ->> 'status', 'active', 'the stale locked report does not undo the unlock');
+select is(jsonb_array_length(current_setting('test.s3')::jsonb -> 'commands'), 0, 'no command is replayed, the unlock flag carries it');
+reset role;
+select is((select status from public.attempts where id = current_setting('test.a1')::uuid), 'active', 'the attempt is still unlocked on the server');
+do $$ begin perform set_config('request.jwt.claims', '{"sub":"bbbbbbbb-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":true}', true); end $$;
+set local role authenticated;
+
+-- the student has now seen 2 unlocks
+select set_config('test.s4', public.heartbeat(current_setting('test.a1')::uuid, 'active', 2, null, 2)::text, true);
+select is((current_setting('test.s4')::jsonb ->> 'unlock')::boolean, false, 'once the unlock is seen it is not repeated');
+select is(current_setting('test.s4')::jsonb ->> 'status', 'active', 'and the student stays unlocked');
+
+-- a caller that does not know its unlock count (older build, cleared storage) never triggers a repeat
+select set_config('test.s5', public.heartbeat(current_setting('test.a1')::uuid, 'locked', 3)::text, true);
+select is(current_setting('test.s5')::jsonb ->> 'status', 'locked', 'without an unlock count a locked report is taken as it is');
+select is((current_setting('test.s5')::jsonb ->> 'unlock')::boolean, false, 'and no unlock is repeated');
 
 -- ---------- finishing ----------
 select lives_ok(format($f$select public.finish_attempt(%L, 'submitted')$f$, current_setting('test.a1')), 'student can finish their attempt');

@@ -185,6 +185,7 @@ mock-only: with the Supabase build it shows nothing; protect forms and unlock fr
 | `ACK`                                                     | —                  | `{ok, state}`                                                                                         |
 | `BLOCKED_INFO` (blocked page)                             | —                  | `{hasSession, mode?, strikes?, max?}`                                                                 |
 | `BLOCKED_BACK` (blocked page)                             | —                  | `{ok}`; goes back (exam tab) or closes the tab and refocuses the exam                                 |
+| `DIAG` (popup status line)                                | `url`              | `{backend, server, version, formId, result: 'not-a-form'\|'live-test'\|'no-live-test'\|'error', title?, error?}` |
 | `DEV_STATE` / `DEV_ADD_TEST` / `DEV_UNLOCK` / `DEV_RESET` | dev only           |                                                                                                       |
 
 Worker → content: `{type: 'STATE', state: publicState(session)}` (or `{ended: true, closed: bool}` when the session ends;
@@ -203,6 +204,7 @@ heartbeat(attemptId, {status, strikes, q}) -> void   (Supabase impl dispatches r
                                                       never call it inside withSessions: handlers take that lock)
 onCommand(handler)                         -> void   handler({type:'unlock'|'closed', attemptId})
                                                      'closed' = the teacher ended the test (D13); background ends the session
+info()                                     -> {backend: 'mock'|'supabase', server}   (popup status line; server = the Supabase URL)
 dev-only (mock): saveTest, sendCommand, listAttempts, listEvents, listTests, reset
 ```
 

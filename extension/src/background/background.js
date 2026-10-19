@@ -495,6 +495,25 @@ async function handlePageLoaded(msg, sender) {
   };
 }
 
+// Popup status line: which server this build talks to, and whether the page the student is on matches a live test.
+// Read-only and shows nothing a student could not already see (the server address is inside the extension).
+async function handleDiag(msg) {
+  const info = backend.info();
+  const out = { backend: info.backend, server: info.server, version: chrome.runtime.getManifest().version, formId: null, result: 'not-a-form' };
+  const formId = typeof msg.url === 'string' ? parseFormId(msg.url) : null;
+  if (!formId) return out;
+  out.formId = formId;
+  try {
+    const test = await backend.getTestByFormId(formId);
+    out.result = test ? 'live-test' : 'no-live-test';
+    out.title = test ? test.title : null;
+  } catch (e) {
+    out.result = 'error';
+    out.error = String((e && e.message) || e).slice(0, 200);
+  }
+  return out;
+}
+
 async function handleStartExam(msg, sender) {
   const tab = sender.tab;
   const formId = tab && parseFormId(msg.url);
@@ -688,6 +707,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'ACK': work = handleAck(sender); break;
     case 'BLOCKED_INFO': work = handleBlockedInfo(); break;
     case 'BLOCKED_BACK': work = handleBlockedBack(sender); break;
+    case 'DIAG': work = handleDiag(msg); break;
     case 'DEV_STATE': case 'DEV_ADD_TEST': case 'DEV_UNLOCK': case 'DEV_RESET': work = handleDev(msg); break;
     default: return false;
   }

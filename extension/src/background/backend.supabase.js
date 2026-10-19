@@ -177,6 +177,11 @@ export function onCommand(handler) {
   handlers.push(handler);
 }
 
+// What this build talks to, for the popup's status line.
+export function info() {
+  return { backend: 'supabase', server: SUPABASE_URL };
+}
+
 export async function getTestByFormId(formId) {
   const rows = await rpc('get_live_test', { p_form_id: formId });
   const t = Array.isArray(rows) ? rows[0] : null;

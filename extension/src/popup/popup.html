@@ -9,9 +9,11 @@
   <div class="cn-popup" id="app">
     <div class="cn-popup__head">
       <strong class="cn-h3">CheatNoNo <span class="cn-muted">dev panel</span></strong>
-      <span class="cn-chip cn-chip--missing">mock backend</span>
+      <span class="cn-chip cn-chip--missing" id="backend-chip">checking…</span>
     </div>
     <div class="cn-popup__body">
+      <div class="cn-banner" id="diag">Checking this page…</div>
+      <div id="dev" class="cn-popup__body" style="padding:0">
       <h2>Protect a form</h2>
       <div class="cn-field">
         <label class="cn-label" for="url">Published form link (Send &rarr; link)</label>
@@ -47,6 +49,7 @@
       <div id="attempts"></div>
       <h2>Event log (newest last)</h2>
       <div class="cn-log" id="log"></div>
+      </div>
     </div>
   </div>
   <script src="popup.js"></script>

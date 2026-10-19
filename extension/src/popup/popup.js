@@ -70,12 +70,44 @@ async function refresh() {
   if (stick) log.scrollTop = log.scrollHeight;
 }
 
+// Status line: which server this build talks to, and whether the open page matches a live test.
+function say2(el, text, kind) {
+  el.className = 'cn-banner' + (kind ? ' cn-banner--' + kind : '');
+  el.textContent = text;
+}
+
+async function diagnose(url) {
+  const box = $('diag');
+  const d = await send({ type: 'DIAG', url });
+  if (!d) { say2(box, 'The extension did not answer. Open chrome://extensions and click reload on CheatNoNo.', 'danger'); return null; }
+  const local = d.server && /127\.0\.0\.1|localhost/.test(d.server);
+  const host = d.server ? new URL(d.server).host : null;
+  $('backend-chip').textContent = d.backend === 'mock' ? 'test build (no server)' : local ? 'local test server' : 'live server';
+  $('dev').style.display = d.backend === 'mock' ? '' : 'none'; // the developer controls only make sense on the mock build
+  const foot = ' (v' + d.version + ')';
+  if (d.backend === 'mock') {
+    say2(box, 'This is the source folder, which uses a fake local backend and never contacts your server. Load the built dist folder instead (chrome://extensions, Load unpacked, pick dist).' + foot, 'danger');
+  } else if (local) {
+    say2(box, 'This build points at 127.0.0.1, the computer it runs on, so it only works where the local test server runs. Rebuild with your hosted project (see DEPLOY.md), then reload this extension.' + foot, 'danger');
+  } else if (d.result === 'not-a-form') {
+    say2(box, 'Connected to ' + host + '. Open your exam link to check it.' + foot);
+  } else if (d.result === 'live-test') {
+    say2(box, 'Connected to ' + host + '. This form is protected by the test "' + d.title + '". You should see the "Before you begin" screen. If you do not, reload the page.' + foot, 'ok');
+  } else if (d.result === 'no-live-test') {
+    say2(box, 'Connected to ' + host + ', but no live test uses this form (form ID ' + d.formId + '). Open the Student link from your dashboard and check the test is Live.' + foot, 'warn');
+  } else {
+    say2(box, 'Could not reach ' + host + ': ' + d.error + foot, 'danger');
+  }
+  return d;
+}
+
 $('protect').addEventListener('click', protect);
 $('reset').addEventListener('click', async () => { await send({ type: 'DEV_RESET' }); say('All mock data cleared.', 'ok'); refresh(); });
 
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   const url = tabs && tabs[0] && tabs[0].url;
   if (url && /docs\.google\.com\/forms\//.test(url)) $('url').value = url;
+  diagnose(url || '');
 });
 
 refresh();

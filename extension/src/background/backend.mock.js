@@ -27,6 +27,11 @@ function tx(fn) {
 
 const newId = () => crypto.randomUUID();
 
+// What this build talks to, for the popup's status line.
+export function info() {
+  return { backend: 'mock', server: null };
+}
+
 export async function getTestByFormId(formId) {
   return tx(async (db) => {
     const t = Object.values(db.tests).find((x) => x.formId === formId && x.status === 'live');

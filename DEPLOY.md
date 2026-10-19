@@ -45,7 +45,7 @@ Three pieces: a hosted **Supabase** project (database + accounts), the **teacher
   ```
   Log in when asked, accept the defaults (no framework, no build command), and you get an `https://….vercel.app` address. `dist/vercel.json` (copied from `dashboard/public/`) makes refreshes and email links work. To update later, rebuild and run the same command again.
 
-`dist/_redirects` (Netlify, Cloudflare) and `dist/vercel.json` (Vercel) are copied from `dashboard/public/` and make page refreshes and email links work. Then go back to Supabase step 3 and set the Site URL to this address.
+`dist/_redirects` (Netlify, Cloudflare), `dist/vercel.json` (Vercel, when you deploy the built `dist` folder) and `dashboard/vercel.json` (Vercel, when you deploy from your repo with the root directory set to `dashboard`: Vercel only reads this file from the project root, not from the build output) are copied from `dashboard/public/` and make page refreshes and email links work. Then go back to Supabase step 3 and set the Site URL to this address.
 
 ## 3. The extension for students
 

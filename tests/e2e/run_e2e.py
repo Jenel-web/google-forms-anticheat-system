@@ -35,6 +35,12 @@ FORM_HTML = f"""<!doctype html><html><head><title>Practice exam</title></head>
 <div role="button" id="submit" tabindex="0" style="padding:16px;background:#ddd"
      onclick="window.__submitted=(window.__submitted||0)+1">Submit</div></body></html>"""
 PLAIN_HTML = "<!doctype html><title>Other site</title><body>Other site</body>"
+# What Google Forms shows at /formResponse after "Next" on a multi-page form: the next section, form still on the page.
+SECTION_HTML = f"""<!doctype html><html><head><title>Practice exam</title></head><body style="margin:0">
+<form id="mG61Hd" action="https://docs.google.com/forms/d/e/{FORM_ID}/formResponse" method="POST"><input type="hidden" name="pageHistory" value="0,1">
+<div role="list"><div role="listitem" style="height:900px">Question 2 <input type="text"></div></div></form></body></html>"""
+SECTION_URL = RESPONSE_URL + "?section=2"
+
 
 failures = []
 
@@ -99,7 +105,9 @@ def main():
 
 def run(ctx):
     def fulfill_form(route):
-        if "formResponse" in route.request.url:
+        if "formResponse" in route.request.url and "section=" in route.request.url:
+            route.fulfill(content_type="text/html", body=SECTION_HTML)
+        elif "formResponse" in route.request.url:
             route.fulfill(content_type="text/html", body="<!doctype html><title>Recorded</title>Your response was recorded.")
         else:
             route.fulfill(content_type="text/html", body=FORM_HTML)
@@ -276,6 +284,18 @@ def run(ctx):
     check("fullscreen exit is logged", bool(events("fullscreen_exit")))
     page.locator("#eg-host button", has_text="Return to fullscreen").click()
     check("returning to fullscreen clears the screen again", wait_until(lambda: page.locator("#eg-host .cn-modal").count() == 0))
+
+    # ---------------------------------------------------------------- multi-page forms: "Next" must not end the exam
+    rules_before = rule_count()
+    reloads_before = len(events("page_reload"))
+    page.goto(SECTION_URL)  # Google Forms posts every page to /formResponse and shows the next section there
+    check("next section: the attempt is not submitted", wait_until(lambda: attempt()["status"] != "submitted", timeout=3) and not events("submitted"), str(attempt()))
+    check("next section: the exam keeps running (fullscreen is dropped by any navigation, so it asks again)",
+          wait_until(lambda: overlay(page, "Return to fullscreen to continue").count() > 0))
+    page.locator("#eg-host button", has_text="Return to fullscreen").click()
+    check("next section: monitoring is back", wait_until(lambda: page.locator("#eg-host .cn-hud").count() == 1))
+    check("next section: the blocklist rules stay in place", rules_before > 0 and rule_count() == rules_before, f"{rules_before} -> {rule_count()}")
+    check("next section: moving between sections is not logged as a reload", len(events("page_reload")) == reloads_before)
 
     # ---------------------------------------------------------------- submit ends the session
     page.goto(RESPONSE_URL)

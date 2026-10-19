@@ -1,6 +1,6 @@
 import * as backend from './backend.js';
 import {
-  EXAM_HOSTS, mergeSettings, parseFormId, isFormResponseUrl, hostOf, domainMatches, entryMatchesUrl,
+  EXAM_HOSTS, mergeSettings, parseFormId, parseResponseFormId, isFormResponseUrl, hostOf, domainMatches, entryMatchesUrl,
   phaseForStrikes, isValidEmail,
 } from '../shared/constants.js';
 import { allowEvent, endedSummaries } from '../shared/throttle.js';
@@ -286,7 +286,14 @@ async function onTabCreated(s, tab) {
 }
 
 async function onExamNavigation(sessions, s, url) {
-  if (isFormResponseUrl(url)) return endSession(sessions, s, 'submitted');
+  if (isFormResponseUrl(url)) {
+    // Google Forms posts every page of a multi-page form, and the final submit, to /formResponse. Only the page that
+    // loads tells them apart (the next section still has the form on it), so wait for the content script's verdict
+    // (RESPONSE_PAGE) instead of ending the exam here. Moving between sections is not a strike or a reload.
+    s.responsePending = true;
+    s.skipReload = true;
+    return;
+  }
   // A blocklisted URL is about to be (or has been) redirected to the blocked page: no goBack, the student
   // sees the page and leaves it with "Back to exam". Logged once, whichever of the two URLs we see first.
   const hit = isEnforce(s) ? blockedEntry(s, url) : null;
@@ -453,7 +460,8 @@ function validName(v) { return typeof v === 'string' && v.trim().length >= 1 && 
 
 async function handlePageLoaded(msg, sender) {
   const tab = sender.tab;
-  const formId = tab && parseFormId(msg.url);
+  const responsePage = !!tab && isFormResponseUrl(msg.url);
+  const formId = tab && (parseFormId(msg.url) || (responsePage ? parseResponseFormId(msg.url) : null));
   if (!formId) return { protected: false };
   const existing = await withSessions(async (sessions) => {
     const s = Object.values(sessions).find((x) => x.formId === formId);
@@ -469,9 +477,10 @@ async function handlePageLoaded(msg, sender) {
     }
     await maybeCloseEpisode(s);
     await syncRules(sessions);
-    return { protected: true, resume: true, state: publicState(s), test: { title: s.title } };
+    return { protected: true, resume: true, responsePage, state: publicState(s), test: { title: s.title }, itemOrder: s.itemOrder || null };
   });
   if (existing) return existing;
+  if (responsePage) return { protected: false }; // an exam never starts from a response page
   let test;
   try {
     test = await backend.getTestByFormId(formId);
@@ -512,6 +521,18 @@ async function handleDiag(msg) {
     out.error = String((e && e.message) || e).slice(0, 200);
   }
   return out;
+}
+
+// The page that loaded at /formResponse is either the next section (the form is still on it) or the final
+// confirmation. The content script looks and tells us; only the final page ends the exam.
+function handleResponsePage(msg, sender) {
+  return withSessions(async (sessions) => {
+    const s = Object.values(sessions).find((x) => x.tabId === sender.tab?.id);
+    if (!s || !s.responsePending) return { ok: false };
+    s.responsePending = false;
+    if (msg.final === true) await endSession(sessions, s, 'submitted');
+    return { ok: true };
+  });
 }
 
 async function handleStartExam(msg, sender) {
@@ -579,6 +600,19 @@ function handleEvent(msg, sender) {
     } else {
       log(s, kind, detail);
     }
+    return { ok: true };
+  });
+}
+
+// The form's question ids in order (from the first page), kept for the pages that follow so "Q11 of 50" counts across
+// pages even when a later page does not carry the form's structure. Ids only; it never leaves the browser.
+function handleFormMap(msg, sender) {
+  const order = Array.isArray(msg.order) ? msg.order.filter(Number.isSafeInteger).slice(0, 500) : [];
+  if (!order.length) return Promise.resolve({ ok: false });
+  return withSessions(async (sessions) => {
+    const s = Object.values(sessions).find((x) => x.tabId === sender.tab?.id);
+    if (!s) return { ok: false };
+    s.itemOrder = order;
     return { ok: true };
   });
 }
@@ -703,10 +737,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'START_EXAM': work = handleStartExam(msg, sender); break;
     case 'EVENT': work = handleEvent(msg, sender); break;
     case 'QUESTION': work = handleQuestion(msg, sender); break;
+    case 'FORM_MAP': work = handleFormMap(msg, sender); break;
     case 'HEARTBEAT': work = handleHeartbeat(msg, sender); break;
     case 'ACK': work = handleAck(sender); break;
     case 'BLOCKED_INFO': work = handleBlockedInfo(); break;
     case 'BLOCKED_BACK': work = handleBlockedBack(sender); break;
+    case 'RESPONSE_PAGE': work = handleResponsePage(msg, sender); break;
     case 'DIAG': work = handleDiag(msg); break;
     case 'DEV_STATE': case 'DEV_ADD_TEST': case 'DEV_UNLOCK': case 'DEV_RESET': work = handleDev(msg); break;
     default: return false;

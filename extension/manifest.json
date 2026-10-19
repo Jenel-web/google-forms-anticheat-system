@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CheatNoNo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Anti-cheat companion for Google Forms exams.",
   "minimum_chrome_version": "110",
   "permissions": ["tabs", "storage", "idle", "identity", "identity.email", "declarativeNetRequest"],
@@ -10,7 +10,7 @@
   "content_scripts": [
     {
       "matches": ["https://docs.google.com/forms/*"],
-      "js": ["src/content/styles.js", "src/content/ui.js", "src/content/content.js"],
+      "js": ["src/content/styles.js", "src/content/ui.js", "src/content/formmap.js", "src/content/content.js"],
       "run_at": "document_start"
     }
   ],

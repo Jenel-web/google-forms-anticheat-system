@@ -10,7 +10,10 @@ const root = dirname(fileURLToPath(import.meta.url));
 const backend = process.argv[2] || process.env.BACKEND || 'supabase';
 if (!['supabase', 'mock'].includes(backend)) throw new Error('BACKEND must be supabase or mock, got: ' + backend);
 
-const dist = join(root, 'dist');
+// Tests build into a private folder (EXT_OUT_DIR) and for the local stack (SUPABASE_LOCAL=1), so they never touch the dist
+// folder you share with students and never depend on .env.production.
+const forceLocal = process.env.SUPABASE_LOCAL === '1';
+const dist = process.env.EXT_OUT_DIR ? resolve(process.env.EXT_OUT_DIR) : join(root, 'dist');
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 
@@ -33,14 +36,14 @@ const pickBackend = {
 
 // Hosted project: SUPABASE_URL and SUPABASE_ANON_KEY (both public), from the environment or from extension/.env.production.
 // Unset = the local `supabase start` defaults.
-if (existsSync(join(root, '.env.production'))) {
+if (!forceLocal && existsSync(join(root, '.env.production'))) {
   for (const line of readFileSync(join(root, '.env.production'), 'utf8').split(/\r?\n/)) {
     const m = line.match(/^\s*(SUPABASE_URL|SUPABASE_ANON_KEY)\s*=\s*(.*?)\s*$/);
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
   }
 }
 const define = {};
-if (process.env.SUPABASE_URL) {
+if (!forceLocal && process.env.SUPABASE_URL) {
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(process.env.SUPABASE_URL)) {
     throw new Error('SUPABASE_URL must look like https://<project-ref>.supabase.co');
   }

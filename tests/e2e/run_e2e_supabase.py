@@ -35,6 +35,12 @@ NAME = "E2E Student"
 FORM_HTML = """<!doctype html><html><head><title>Practice exam</title></head><body style="margin:0">
 <div role="list"><div role="listitem" style="height:900px">Question 1 <input type="text"></div></div></body></html>"""
 PLAIN_HTML = "<!doctype html><title>Other site</title><body>Other site</body>"
+# What Google Forms shows at /formResponse after "Next" on a multi-page form: the next section, form still on the page.
+SECTION_HTML = f"""<!doctype html><html><head><title>Practice exam</title></head><body style="margin:0">
+<form id="mG61Hd" action="https://docs.google.com/forms/d/e/{FORM_ID}/formResponse" method="POST"><input type="hidden" name="pageHistory" value="0,1">
+<div role="list"><div role="listitem" style="height:900px">Question 2 <input type="text"></div></div></form></body></html>"""
+SECTION_URL = RESPONSE_URL + "?section=2"
+
 
 failures = []
 PUMP = None
@@ -117,9 +123,10 @@ class Teacher:
 
 # ------------------------------------------------------------------ browser helpers
 def prepare_extension(tmp):
-    subprocess.run(["node", "build.mjs", "supabase"], cwd=ROOT / "extension", check=True)
+    # Always the local stack, in a private folder: never extension/dist (the build you share) and never .env.production.
     dest = Path(tmp) / "extension"
-    shutil.copytree(ROOT / "extension" / "dist", dest)
+    env = {**os.environ, "SUPABASE_LOCAL": "1", "EXT_OUT_DIR": str(dest)}
+    subprocess.run(["node", "build.mjs", "supabase"], cwd=ROOT / "extension", check=True, env=env)
     ui = dest / "src" / "content" / "ui.js"
     patched, n = re.subn(r"mode:\s*'closed'", "mode: 'open'", ui.read_text(encoding="utf-8"))
     assert n == 1
@@ -158,7 +165,9 @@ def launch(p, tmp, ext, profile="profile", with_ext=True):
         return ctx, PUMP
 
     def fulfill_form(route):
-        if "formResponse" in route.request.url:
+        if "formResponse" in route.request.url and "section=" in route.request.url:
+            route.fulfill(content_type="text/html", body=SECTION_HTML)
+        elif "formResponse" in route.request.url:
             route.fulfill(content_type="text/html", body="<!doctype html><title>Recorded</title>Your response was recorded.")
         else:
             route.fulfill(content_type="text/html", body=FORM_HTML)
@@ -314,6 +323,18 @@ def flow_b(ctx, helper, teacher):
 
     teacher.unlock(old_attempt["id"])
     check("restart: unlock works after a restart", wait_until(lambda: overlay(page, "Your exam is paused").count() == 0, timeout=10))
+    # multi-page form: "Next" posts to /formResponse and shows the next section there. That must not end the exam.
+    page.goto(SECTION_URL)
+    pause(3)
+    check("next section: the attempt is still running, not submitted",
+          teacher.latest()["status"] in ("active", "away", "warned") and teacher.latest()["ended_at"] is None, str(teacher.latest()))
+    check("next section: monitoring resumes on the new page", wait_until(lambda: page.locator("#eg-host .cn-hud").count() == 1, timeout=10))
+    # Any navigation drops fullscreen, so the exam asks for it again and the input guard ignores everything until the student
+    # clicks "Return to fullscreen". Do what a student does before sending more input.
+    if wait_until(lambda: page.locator("#eg-host button", has_text="Return to fullscreen").count() > 0, timeout=5):
+        page.locator("#eg-host button", has_text="Return to fullscreen").click()
+    check("next section: after Return to fullscreen the page is usable again", wait_until(lambda: page.locator("#eg-host .cn-modal").count() == 0, timeout=8))
+
     def typed(kind):
         return teacher.get(f"/rest/v1/events?select=data&attempt_id=eq.{old_attempt['id']}&type=eq.{kind}")
 

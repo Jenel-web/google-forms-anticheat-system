@@ -1,8 +1,10 @@
-// Page monitoring + boot flow. Classic script; runs after styles.js (EG_CSS) and ui.js (EG_UI).
+// Page monitoring + boot flow. Classic script; runs after styles.js (EG_CSS), ui.js (EG_UI) and formmap.js (EG_FORM).
 (() => {
   'use strict';
 
   const QUESTION_SELECTOR = 'div[role="listitem"]'; // Google Forms DOM is unofficial: keep the selector in one place
+  // The form itself is still on the page when /formResponse shows the next section; the final confirmation has none.
+  const FORM_SELECTOR = 'form[action*="/formResponse"], input[name="pageHistory"]';
   const HEARTBEAT_MS = 5000;
   const BLUR = 'blur(7px) saturate(.9)';
   const GUARDED_EVENTS = [
@@ -19,6 +21,7 @@
   let wantBlur = false;
   let lastInputLog = 0;
   let lastQ = null;
+  let formOrder = null;    // ids of all the form's questions in order, so numbers count across pages (see formmap.js)
   let hbTimer = null;
   let enforceTimer = null;
 
@@ -205,10 +208,44 @@
     return null;
   }
 
+  function pageFormOrder() {
+    return EG_FORM.orderFromScripts(Array.from(document.scripts, (s) => s.textContent || ''));
+  }
+
+  function itemIdOf(el) {
+    for (const node of el.querySelectorAll('[data-params]')) {
+      const id = EG_FORM.idFromParams(node.getAttribute('data-params'));
+      if (id !== null) return id;
+    }
+    return null;
+  }
+
+  // Learn the form's structure from this page and tell the worker, which keeps it for the pages that follow.
+  function syncFormMap() {
+    const order = pageFormOrder();
+    if (!order) return;
+    formOrder = order;
+    send({ type: 'FORM_MAP', order });
+  }
+
   function currentQuestion() {
     const items = Array.from(document.querySelectorAll(QUESTION_SELECTOR));
     if (!items.length) return null;
     const mid = window.innerHeight / 2;
+    if (formOrder) {
+      // Number by the whole form: the question's position among all questions on every page ("11 of 50").
+      let bestNum = 0;
+      let bestD = Infinity;
+      for (const el of items) {
+        const num = EG_FORM.numberFor(formOrder, itemIdOf(el));
+        if (!num) continue; // a description, image or section title is not a question
+        const r = el.getBoundingClientRect();
+        const d = Math.abs((r.top + r.bottom) / 2 - mid);
+        if (d < bestD) { bestD = d; bestNum = num; }
+      }
+      if (bestNum) return { i: bestNum, n: formOrder.length };
+    }
+    // Structure unknown (Google changed its markup): count the items on this page, as before.
     let best = 0;
     let bestDist = Infinity;
     items.forEach((el, idx) => {
@@ -258,6 +295,7 @@
     EG_UI.hide(); // clears the consent screen
     shownKey = '';
     applyState(st);
+    syncFormMap();
     lastQ = null;
     trackQuestion();
     clearInterval(hbTimer);
@@ -276,11 +314,32 @@
     });
   } catch { /* orphaned content script */ }
 
+  function waitFor(test, timeoutMs) {
+    return new Promise((resolve) => {
+      const end = Date.now() + timeoutMs;
+      const tick = () => {
+        let hit = null;
+        try { hit = test(); } catch { /* keep waiting */ }
+        if (hit) resolve(hit);
+        else if (Date.now() >= end) resolve(null);
+        else setTimeout(tick, 100);
+      };
+      tick();
+    });
+  }
+
   async function boot() {
     const res = await send({ type: 'PAGE_LOADED', url: location.href });
     if (!res || !res.protected) return; // not a protected exam: stay silent
+    if (res.responsePage) {
+      // Google Forms shows the next section at /formResponse too. Wait briefly for the form to be there before deciding.
+      const section = await waitFor(() => document.querySelector(FORM_SELECTOR), 2000);
+      send({ type: 'RESPONSE_PAGE', final: !section });
+      if (!section) return; // the final confirmation page: the exam is over, the worker ends the session
+    }
     test = res.test;
     identity = res.identity;
+    formOrder = pageFormOrder() || res.itemOrder || null; // this page's own data, else what the worker kept
     enforceTimer = setInterval(enforce, 250);
     if (res.incognito) {
       shownKey = 'incognito';

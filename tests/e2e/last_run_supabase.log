@@ -1,7 +1,7 @@
 
-  dist\src\background\background.js  765.5kb
+  ...cheatnono-e2e-sb-eh9e8qy2\extension\src\background\background.js  767.2kb
 
-Done in 35ms
+Done in 33ms
 Built extension/dist with the supabase backend (local stack). Load it unpacked from chrome://extensions.
 PASS  unprotected form: nothing appears
 PASS  seeded form is live: consent screen appears
@@ -28,6 +28,9 @@ PASS  after a browser restart the consent screen is shown again
 PASS  restart: the same locked attempt is resumed (FR-26)
 PASS  restart: no second attempt (same anonymous identity)
 PASS  restart: unlock works after a restart
+PASS  next section: the attempt is still running, not submitted
+PASS  next section: monitoring resumes on the new page
+PASS  next section: after Return to fullscreen the page is usable again
 PASS  cap: 25 rapid paste attempts store only 10 events
 PASS  cap: the other 15 are summarised as one events_capped event when the exam ends
 PASS  submit: the attempt ends as submitted
@@ -38,7 +41,7 @@ PASS  outage: new attempt row
 PASS  outage: the strike still shows locally
 PASS  outage: the API comes back
 PASS  outage: queued events arrive after reconnect
-      (events arrived 4s after the API came back)
+      (events arrived 5s after the API came back)
 PASS  D12/Phase 5: the outage is recorded as one connection_gap event of about a minute
 PASS  outage: events carry contiguous sequence numbers
 PASS  outage: strike count reaches the database
@@ -46,7 +49,7 @@ PASS  D12: the outage itself is not penalized (1 strike, not locked)
 PASS  extension disabled: the attempt stays active (not finished)
 PASS  extension disabled: last_heartbeat goes stale
 PASS  closed-in-SQL: reopening the form resumes the same attempt
-PASS  closed-in-SQL: the student sees the closed screen within about 5 s (took 4.9s)
+PASS  closed-in-SQL: the student sees the closed screen within about 5 s (took 4.8s)
 PASS  closed-in-SQL: the HUD is gone and monitoring stopped
 PASS  closed-in-SQL: the screen can be dismissed
 PASS  closed-in-SQL: the attempt stays closed
@@ -54,12 +57,12 @@ PASS  second exam: consent screen
 PASS  second exam starts
 PASS  a finished attempt does not block a new one
 PASS  End closes the attempt in the database at once
-PASS  the student's HUD goes away within about 5 s (took 4.8s)
+PASS  the student's HUD goes away within about 5 s (took 4.7s)
 PASS  the student sees the closed screen
 PASS  events before close reached the database
 PASS  second profile: consent screen
 PASS  second profile: exam starts
 PASS  second profile: a new attempt with a different student_uid
-      (25 attempts for this student name, 14 distinct student_uid values)
+      (43 attempts for this student name, 26 distinct student_uid values)
 
 All checks passed.

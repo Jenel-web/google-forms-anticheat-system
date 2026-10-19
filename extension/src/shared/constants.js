@@ -65,6 +65,19 @@ export function formLinkIssue(url) {
   return parseFormId(text) ? null : 'NOT_A_FORM_LINK';
 }
 
+// The published form ID of a /formResponse address, or null. Google Forms posts every page of a multi-page form (and the
+// final submit) to this address, so it alone cannot tell "next section" from "submitted".
+export function parseResponseFormId(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'docs.google.com') return null;
+    const m = u.pathname.match(/^\/forms\/(?:u\/\d+\/)?d\/(?:e\/)?([A-Za-z0-9_-]+)\/formResponse\/?$/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 export function isFormResponseUrl(url) {
   try {
     const u = new URL(url);

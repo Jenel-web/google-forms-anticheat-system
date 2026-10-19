@@ -45,6 +45,11 @@ PASS  exiting fullscreen shows the fullscreen screen
 PASS  fullscreen exit adds no strike
 PASS  fullscreen exit is logged
 PASS  returning to fullscreen clears the screen again
+PASS  next section: the attempt is not submitted
+PASS  next section: the exam keeps running (fullscreen is dropped by any navigation, so it asks again)
+PASS  next section: monitoring is back
+PASS  next section: the blocklist rules stay in place
+PASS  next section: moving between sections is not logged as a reload
 PASS  /formResponse -> attempt submitted
 PASS  /formResponse -> DNR rules removed
 PASS  exam tab -> chatgpt.com shows the blocked page in that tab

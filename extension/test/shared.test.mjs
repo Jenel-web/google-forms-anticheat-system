@@ -1,3 +1,4 @@
+import { parseResponseFormId } from '../src/shared/constants.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseFormId, formLinkIssue } from '../src/shared/constants.js';
@@ -27,4 +28,13 @@ test('other input is rejected', () => {
   assert.equal(formLinkIssue('https://example.com/forms/d/e/abc/viewform'), 'NOT_A_FORM_LINK');
   assert.equal(formLinkIssue('https://forms.gle/abc123'), 'NOT_A_FORM_LINK');
   assert.equal(formLinkIssue('https://docs.google.com/forms/d/e/abc/formResponse'), 'NOT_A_FORM_LINK');
+});
+
+test('parseResponseFormId reads the form ID from a /formResponse address, and only from there', () => {
+  const id = '1FAIpQLScAYKRSz6bfsWY';
+  assert.equal(parseResponseFormId(`https://docs.google.com/forms/d/e/${id}/formResponse`), id);
+  assert.equal(parseResponseFormId(`https://docs.google.com/forms/u/1/d/e/${id}/formResponse?pageHistory=0,1`), id);
+  assert.equal(parseResponseFormId(`https://docs.google.com/forms/d/e/${id}/viewform`), null);
+  assert.equal(parseResponseFormId(`https://example.com/forms/d/e/${id}/formResponse`), null);
+  assert.equal(parseResponseFormId('not a url'), null);
 });

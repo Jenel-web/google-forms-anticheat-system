@@ -247,4 +247,4 @@ Working rules for contributors are in [CLAUDE.md](CLAUDE.md).
 | M2 | Supabase backend, resume after restart | Done |
 | M3 | Teacher dashboard: tests, go live, live monitor, unlock, end test | Done |
 | M4 | Timeline, integrity score, report, heatmap, CSV, reconciliation | Done |
-| M5 | Student onboarding page, Chrome Web Store listing, PDF export, automatic data retention, accessibility review | DoneNo, no.  |
+| M5 | Student onboarding page, Chrome Web Store listing, PDF export, automatic data retention, accessibility review | Done.  |
